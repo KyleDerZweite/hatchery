@@ -1,0 +1,63 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hatchery-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/hatchery.db}
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY:-}
+    volumes:
+      - backend_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Uncomment the following lines if using PostgreSQL
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    container_name: hatchery-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # PostgreSQL Database (Optional - Uncomment to use instead of SQLite)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: hatchery-postgres
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-hatchery}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hatchery}
+  #     POSTGRES_DB: ${POSTGRES_DB:-hatchery}
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hatchery} -d ${POSTGRES_DB:-hatchery}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+
+volumes:
+  backend_data:
+  # postgres_data:  # Uncomment if using PostgreSQL
