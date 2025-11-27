@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import select
 
 from app.api import api_router
-from app.core import settings, get_password_hash
-from app.core.db import init_db, async_session_maker
+from app.core import get_password_hash, settings
+from app.core.db import async_session_maker, init_db
 from app.models import User, UserRole
 
 
@@ -16,10 +16,10 @@ async def create_default_admin():
         # Check if any users exist
         result = await session.execute(select(User).limit(1))
         existing_user = result.scalar_one_or_none()
-        
+
         if existing_user:
             return  # Users exist, don't create default admin
-        
+
         # Create the default admin user
         admin = User(
             username=settings.default_admin_username,
@@ -28,10 +28,10 @@ async def create_default_admin():
             role=UserRole.ADMIN,
             is_active=True,
         )
-        
+
         session.add(admin)
         await session.commit()
-        
+
         print(f"✅ Created default admin user: {settings.default_admin_username}")
         print(f"   Email: {settings.default_admin_email}")
         print(f"   Password: {settings.default_admin_password}")

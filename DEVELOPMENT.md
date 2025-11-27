@@ -206,6 +206,59 @@ When disabled:
 - `DELETE /api/eggs/{id}` - Delete an egg
 - `GET /api/eggs/{id}/download` - Download egg JSON
 
+### AI Assistant (Optional, Opt-in)
+- `GET /api/ai/config` - Get current AI configuration
+- `PUT /api/ai/config` - Update AI configuration
+- `DELETE /api/ai/config` - Disable AI
+- `POST /api/ai/test` - Test AI connection
+- `POST /api/ai/clean-name` - Clean modpack name
+- `POST /api/ai/enhance-description` - Generate/enhance description
+- `POST /api/ai/detect-modloader` - Detect modloader from hints
+- `POST /api/ai/suggest-java` - Suggest Java version
+- `POST /api/ai/fix-parse-error` - Extract info from malformed config
+
+## AI Integration (Optional)
+
+Hatchery supports optional AI assistance for cleaning names, enhancing descriptions, and recovering from parse errors. This feature is **completely opt-in** and requires user configuration.
+
+### Supported Providers
+
+Any OpenAI-compatible API works. Examples:
+
+| Provider | Endpoint | Example Models |
+|----------|----------|----------------|
+| **OpenRouter** | `https://openrouter.ai/api/v1` | `google/gemini-flash-1.5-8b`, `anthropic/claude-3-haiku` |
+| **Ollama** (local) | `http://localhost:11434/v1` | `qwen2.5:0.5b`, `qwen2.5:1.5b`, `llama3.2:1b` |
+| **OpenAI** | `https://api.openai.com/v1` | `gpt-4o-mini` |
+| **Anthropic** | Via OpenRouter | `anthropic/claude-3-haiku` |
+
+### Privacy & Minimal Data
+
+AI requests send **only** the minimal data required:
+
+| Task | Data Sent |
+|------|-----------|
+| Clean Name | Raw name only (max 500 chars) |
+| Enhance Description | Name + existing desc (max 200 chars) + modloader |
+| Detect Modloader | Hint text only (max 500 chars) |
+| Suggest Java | Minecraft version + optional info |
+| Fix Parse Error | Config snippet (max 1000 chars) |
+
+No full modpack data, user information, or server configurations are ever sent.
+
+### Configuration Example
+
+```json
+{
+  "enabled": true,
+  "api_endpoint": "https://openrouter.ai/api/v1",
+  "api_key": "sk-or-...",
+  "model": "google/gemini-flash-1.5-8b",
+  "max_tokens": 150,
+  "temperature": 0.3
+}
+```
+
 ## Development Commands
 
 ### Backend

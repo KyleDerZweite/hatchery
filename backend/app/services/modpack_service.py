@@ -8,10 +8,10 @@ This service handles:
 """
 
 import re
-from datetime import datetime, timezone
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
-from dataclasses import dataclass, field
 
 import httpx
 
@@ -21,6 +21,7 @@ from app.models.egg import ModpackSource
 
 class ModpackType(str, Enum):
     """Supported modloader types."""
+
     FORGE = "forge"
     FABRIC = "fabric"
     NEOFORGE = "neoforge"
@@ -31,6 +32,7 @@ class ModpackType(str, Enum):
 @dataclass
 class ModpackInfo:
     """Container for parsed modpack information."""
+
     name: str = "Unknown Modpack"
     source: ModpackSource = ModpackSource.UNKNOWN
     source_url: str = ""
@@ -64,14 +66,13 @@ class ModpackService:
 
     # Modrinth API base URL
     MODRINTH_API = "https://api.modrinth.com/v2"
-    
+
     # CurseForge API base URL
     CURSEFORGE_API = "https://api.curseforge.com/v1"
 
     def __init__(self):
         self.http_client = httpx.AsyncClient(
-            timeout=30.0,
-            headers={"User-Agent": "Hatchery/1.0 (https://github.com/hatchery)"}
+            timeout=30.0, headers={"User-Agent": "Hatchery/1.0 (https://github.com/hatchery)"}
         )
 
     async def close(self):
@@ -88,12 +89,20 @@ class ModpackService:
         for pattern in self.CURSEFORGE_PATTERNS:
             match = re.search(pattern, url)
             if match:
-                return ModpackSource.CURSEFORGE, match.group(1), match.group(2) if len(match.groups()) > 1 else None
+                return (
+                    ModpackSource.CURSEFORGE,
+                    match.group(1),
+                    match.group(2) if len(match.groups()) > 1 else None,
+                )
 
         for pattern in self.MODRINTH_PATTERNS:
             match = re.search(pattern, url)
             if match:
-                return ModpackSource.MODRINTH, match.group(1), match.group(2) if len(match.groups()) > 1 else None
+                return (
+                    ModpackSource.MODRINTH,
+                    match.group(1),
+                    match.group(2) if len(match.groups()) > 1 else None,
+                )
 
         return ModpackSource.UNKNOWN, None, None
 
@@ -122,7 +131,9 @@ class ModpackService:
                 description="Unable to parse modpack URL. Please provide a valid CurseForge or Modrinth URL.",
             )
 
-    async def _fetch_modrinth_info(self, slug: str, version_id: str | None, url: str) -> ModpackInfo:
+    async def _fetch_modrinth_info(
+        self, slug: str, version_id: str | None, url: str
+    ) -> ModpackInfo:
         """Fetch modpack info from Modrinth API."""
         info = ModpackInfo(
             source=ModpackSource.MODRINTH,
@@ -150,12 +161,20 @@ class ModpackService:
                     # Use specified version or latest
                     version = None
                     if version_id:
-                        version = next((v for v in versions if v.get("id") == version_id or v.get("version_number") == version_id), None)
+                        version = next(
+                            (
+                                v
+                                for v in versions
+                                if v.get("id") == version_id
+                                or v.get("version_number") == version_id
+                            ),
+                            None,
+                        )
                     if not version:
                         version = versions[0]  # Latest version
 
                     info.file_id = version.get("id")
-                    
+
                     # Get Minecraft version
                     game_versions = version.get("game_versions", [])
                     mc_versions = [v for v in game_versions if re.match(r"^\d+\.\d+(\.\d+)?$", v)]
@@ -238,7 +257,7 @@ class ModpackService:
                     info.project_id = str(mod.get("id", ""))
                     info.name = mod.get("name", slug)
                     info.description = mod.get("summary", "")
-                    
+
                     # Get icon
                     logo = mod.get("logo", {})
                     info.icon_url = logo.get("url") if logo else None
@@ -253,7 +272,9 @@ class ModpackService:
                     if latest_files:
                         target_file = None
                         if file_id:
-                            target_file = next((f for f in latest_files if str(f.get("id")) == file_id), None)
+                            target_file = next(
+                                (f for f in latest_files if str(f.get("id")) == file_id), None
+                            )
                         if not target_file:
                             target_file = latest_files[0]
 
@@ -262,7 +283,9 @@ class ModpackService:
 
                         # Get Minecraft version
                         game_versions = target_file.get("gameVersions", [])
-                        mc_versions = [v for v in game_versions if re.match(r"^\d+\.\d+(\.\d+)?$", v)]
+                        mc_versions = [
+                            v for v in game_versions if re.match(r"^\d+\.\d+(\.\d+)?$", v)
+                        ]
                         if mc_versions:
                             info.minecraft_version = mc_versions[0]
 
@@ -338,14 +361,12 @@ class ModpackService:
         # Generate egg JSON
         egg_json = {
             "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY HATCHERY",
-            "meta": {
-                "version": "PTDL_v2",
-                "update_url": None
-            },
-            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "meta": {"version": "PTDL_v2", "update_url": None},
+            "exported_at": datetime.now(UTC).isoformat(),
             "name": modpack_info.name,
             "author": "hatchery@generated.local",
-            "description": modpack_info.description or f"Generated {modloader.value.title()} server for {modpack_info.name}",
+            "description": modpack_info.description
+            or f"Generated {modloader.value.title()} server for {modpack_info.name}",
             "features": ["eula", "java_version", "pid_limit"],
             "docker_images": self._get_docker_images(java_ver),
             "file_denylist": [],
@@ -354,13 +375,13 @@ class ModpackService:
                 "files": '{\r\n    "server.properties": {\r\n        "parser": "properties",\r\n        "find": {\r\n            "server-port": "{{server.build.default.port}}",\r\n            "enable-query": "true",\r\n            "query.port": "{{server.build.default.port}}"\r\n        }\r\n    }\r\n}',
                 "startup": '{\r\n    "done": ")! For help, type "\r\n}',
                 "logs": '{\r\n    "custom": false,\r\n    "location": "logs/latest.log"\r\n}',
-                "stop": "stop"
+                "stop": "stop",
             },
             "scripts": {
                 "installation": {
                     "script": self._get_install_script(modpack_info, modloader),
                     "container": f"eclipse-temurin:{java_ver}-jdk",
-                    "entrypoint": "bash"
+                    "entrypoint": "bash",
                 }
             },
             "variables": self._get_variables(modpack_info, modloader, java_ver),
@@ -374,7 +395,7 @@ class ModpackService:
         images = {
             f"Java {java_version}": f"{base}:java_{java_version}",
         }
-        
+
         # Add common fallbacks
         if java_version != 17:
             images["Java 17"] = f"{base}:java_17"
@@ -413,7 +434,9 @@ class ModpackService:
 
         return script
 
-    def _get_fabric_install_script(self, mc_version: str, loader_version: str, info: ModpackInfo) -> str:
+    def _get_fabric_install_script(
+        self, mc_version: str, loader_version: str, info: ModpackInfo
+    ) -> str:
         """Generate Fabric server installation script."""
         return f'''#!/bin/bash
 # Fabric Server Installation Script - Generated by Hatchery
@@ -483,7 +506,9 @@ echo "eula=true" > eula.txt
 echo "✅ Fabric server installation completed!"
 '''
 
-    def _get_forge_install_script(self, mc_version: str, loader_version: str, info: ModpackInfo) -> str:
+    def _get_forge_install_script(
+        self, mc_version: str, loader_version: str, info: ModpackInfo
+    ) -> str:
         """Generate Forge server installation script."""
         return f'''#!/bin/bash
 # Forge Server Installation Script - Generated by Hatchery
@@ -553,7 +578,9 @@ echo "eula=true" > eula.txt
 echo "✅ Forge server installation completed!"
 '''
 
-    def _get_neoforge_install_script(self, mc_version: str, loader_version: str, info: ModpackInfo) -> str:
+    def _get_neoforge_install_script(
+        self, mc_version: str, loader_version: str, info: ModpackInfo
+    ) -> str:
         """Generate NeoForge server installation script."""
         return f'''#!/bin/bash
 # NeoForge Server Installation Script - Generated by Hatchery
@@ -616,7 +643,9 @@ echo "eula=true" > eula.txt
 echo "✅ NeoForge server installation completed!"
 '''
 
-    def _get_quilt_install_script(self, mc_version: str, loader_version: str, info: ModpackInfo) -> str:
+    def _get_quilt_install_script(
+        self, mc_version: str, loader_version: str, info: ModpackInfo
+    ) -> str:
         """Generate Quilt server installation script."""
         return f'''#!/bin/bash
 # Quilt Server Installation Script - Generated by Hatchery
@@ -738,7 +767,7 @@ echo "✅ Vanilla server installation completed!"
                 "user_viewable": True,
                 "user_editable": True,
                 "rules": "required|string|max:50",
-                "field_type": "text"
+                "field_type": "text",
             },
             {
                 "name": "Server Memory",
@@ -748,7 +777,7 @@ echo "✅ Vanilla server installation completed!"
                 "user_viewable": True,
                 "user_editable": False,
                 "rules": "required|numeric|min:512",
-                "field_type": "text"
+                "field_type": "text",
             },
             {
                 "name": "Minecraft Version",
@@ -758,68 +787,78 @@ echo "✅ Vanilla server installation completed!"
                 "user_viewable": True,
                 "user_editable": True,
                 "rules": "required|string|max:20",
-                "field_type": "text"
+                "field_type": "text",
             },
         ]
 
         # Add modloader-specific variables
         if modloader == ModpackType.FABRIC:
-            variables.append({
-                "name": "Fabric Version",
-                "description": "The version of Fabric loader to install.",
-                "env_variable": "FABRIC_VERSION",
-                "default_value": modpack_info.modloader_version or "latest",
-                "user_viewable": True,
-                "user_editable": True,
-                "rules": "required|string|max:20",
-                "field_type": "text"
-            })
+            variables.append(
+                {
+                    "name": "Fabric Version",
+                    "description": "The version of Fabric loader to install.",
+                    "env_variable": "FABRIC_VERSION",
+                    "default_value": modpack_info.modloader_version or "latest",
+                    "user_viewable": True,
+                    "user_editable": True,
+                    "rules": "required|string|max:20",
+                    "field_type": "text",
+                }
+            )
         elif modloader == ModpackType.FORGE:
-            variables.append({
-                "name": "Forge Version",
-                "description": "The version of Forge to install.",
-                "env_variable": "FORGE_VERSION",
-                "default_value": modpack_info.modloader_version or "recommended",
-                "user_viewable": True,
-                "user_editable": True,
-                "rules": "required|string|max:20",
-                "field_type": "text"
-            })
+            variables.append(
+                {
+                    "name": "Forge Version",
+                    "description": "The version of Forge to install.",
+                    "env_variable": "FORGE_VERSION",
+                    "default_value": modpack_info.modloader_version or "recommended",
+                    "user_viewable": True,
+                    "user_editable": True,
+                    "rules": "required|string|max:20",
+                    "field_type": "text",
+                }
+            )
         elif modloader == ModpackType.NEOFORGE:
-            variables.append({
-                "name": "NeoForge Version",
-                "description": "The version of NeoForge to install.",
-                "env_variable": "NEOFORGE_VERSION",
-                "default_value": modpack_info.modloader_version or "latest",
-                "user_viewable": True,
-                "user_editable": True,
-                "rules": "required|string|max:20",
-                "field_type": "text"
-            })
+            variables.append(
+                {
+                    "name": "NeoForge Version",
+                    "description": "The version of NeoForge to install.",
+                    "env_variable": "NEOFORGE_VERSION",
+                    "default_value": modpack_info.modloader_version or "latest",
+                    "user_viewable": True,
+                    "user_editable": True,
+                    "rules": "required|string|max:20",
+                    "field_type": "text",
+                }
+            )
         elif modloader == ModpackType.QUILT:
-            variables.append({
-                "name": "Quilt Version",
-                "description": "The version of Quilt loader to install.",
-                "env_variable": "QUILT_VERSION",
-                "default_value": modpack_info.modloader_version or "latest",
-                "user_viewable": True,
-                "user_editable": True,
-                "rules": "required|string|max:20",
-                "field_type": "text"
-            })
+            variables.append(
+                {
+                    "name": "Quilt Version",
+                    "description": "The version of Quilt loader to install.",
+                    "env_variable": "QUILT_VERSION",
+                    "default_value": modpack_info.modloader_version or "latest",
+                    "user_viewable": True,
+                    "user_editable": True,
+                    "rules": "required|string|max:20",
+                    "field_type": "text",
+                }
+            )
 
         # Add modpack URL variable if available
         if modpack_info.download_url:
-            variables.append({
-                "name": "Modpack URL",
-                "description": "Direct download URL for the modpack.",
-                "env_variable": "MODPACK_URL",
-                "default_value": modpack_info.download_url,
-                "user_viewable": True,
-                "user_editable": True,
-                "rules": "nullable|url",
-                "field_type": "text"
-            })
+            variables.append(
+                {
+                    "name": "Modpack URL",
+                    "description": "Direct download URL for the modpack.",
+                    "env_variable": "MODPACK_URL",
+                    "default_value": modpack_info.download_url,
+                    "user_viewable": True,
+                    "user_editable": True,
+                    "rules": "nullable|url",
+                    "field_type": "text",
+                }
+            )
 
         return variables
 

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status
 from sqlmodel import select
 
-from app.core import CurrentAdmin, CurrentUser, SessionDep, get_password_hash
-from app.models import User, UserRead, UserRole, UserUpdate
+from app.core import CurrentAdmin, CurrentUser, SessionDep
+from app.models import User, UserRead, UserUpdate
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -26,18 +26,18 @@ async def update_current_user(
     Users cannot change their own role.
     """
     update_data = user_update.model_dump(exclude_unset=True)
-    
+
     # Users cannot change their own role
     update_data.pop("role", None)
     update_data.pop("is_active", None)
-    
+
     for key, value in update_data.items():
         setattr(current_user, key, value)
-    
+
     session.add(current_user)
     await session.commit()
     await session.refresh(current_user)
-    
+
     return current_user
 
 
@@ -51,9 +51,7 @@ async def list_users(
     """
     List all users. Admin only.
     """
-    result = await session.execute(
-        select(User).offset(skip).limit(limit)
-    )
+    result = await session.execute(select(User).offset(skip).limit(limit))
     return result.scalars().all()
 
 
@@ -66,17 +64,12 @@ async def get_user(
     """
     Get a specific user by ID. Admin only.
     """
-    result = await session.execute(
-        select(User).where(User.id == user_id)
-    )
+    result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
     return user
 
 
@@ -90,25 +83,20 @@ async def update_user(
     """
     Update a user. Admin only.
     """
-    result = await session.execute(
-        select(User).where(User.id == user_id)
-    )
+    result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
     update_data = user_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(user, key, value)
-    
+
     session.add(user)
     await session.commit()
     await session.refresh(user)
-    
+
     return user
 
 
@@ -124,20 +112,14 @@ async def delete_user(
     """
     if user_id == current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete yourself"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot delete yourself"
         )
-    
-    result = await session.execute(
-        select(User).where(User.id == user_id)
-    )
+
+    result = await session.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
     await session.delete(user)
     await session.commit()

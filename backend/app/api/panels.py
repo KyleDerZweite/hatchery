@@ -1,9 +1,9 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, HTTPException, status
-from sqlmodel import select, or_
+from sqlmodel import select
 
-from app.core import CurrentAdmin, CurrentUser, SessionDep
+from app.core import CurrentUser, SessionDep
 from app.models import (
     PanelInstance,
     PanelInstanceCreate,
@@ -29,11 +29,11 @@ async def create_panel(
         **panel_data.model_dump(),
         owner_id=current_user.id,
     )
-    
+
     session.add(panel)
     await session.commit()
     await session.refresh(panel)
-    
+
     return panel
 
 
@@ -49,9 +49,7 @@ async def list_panels(
     Admins see all panels; users see only their own.
     """
     if current_user.role == UserRole.ADMIN:
-        result = await session.execute(
-            select(PanelInstance).offset(skip).limit(limit)
-        )
+        result = await session.execute(select(PanelInstance).offset(skip).limit(limit))
     else:
         result = await session.execute(
             select(PanelInstance)
@@ -59,7 +57,7 @@ async def list_panels(
             .offset(skip)
             .limit(limit)
         )
-    
+
     return result.scalars().all()
 
 
@@ -74,24 +72,18 @@ async def get_panel(
     Only the owner or admin can view.
     Returns the API key for the owner.
     """
-    result = await session.execute(
-        select(PanelInstance).where(PanelInstance.id == panel_id)
-    )
+    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
     panel = result.scalar_one_or_none()
-    
+
     if not panel:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Panel not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
+
     # Check permissions
     if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view this panel"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this panel"
         )
-    
+
     return panel
 
 
@@ -106,34 +98,28 @@ async def update_panel(
     Update a panel instance.
     Only the owner or admin can update.
     """
-    result = await session.execute(
-        select(PanelInstance).where(PanelInstance.id == panel_id)
-    )
+    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
     panel = result.scalar_one_or_none()
-    
+
     if not panel:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Panel not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
+
     # Check permissions
     if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this panel"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this panel"
         )
-    
+
     update_data = panel_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(panel, key, value)
-    
-    panel.updated_at = datetime.now(timezone.utc)
-    
+
+    panel.updated_at = datetime.now(UTC)
+
     session.add(panel)
     await session.commit()
     await session.refresh(panel)
-    
+
     return panel
 
 
@@ -147,24 +133,18 @@ async def delete_panel(
     Delete a panel instance.
     Only the owner or admin can delete.
     """
-    result = await session.execute(
-        select(PanelInstance).where(PanelInstance.id == panel_id)
-    )
+    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
     panel = result.scalar_one_or_none()
-    
+
     if not panel:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Panel not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
+
     # Check permissions
     if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this panel"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this panel"
         )
-    
+
     await session.delete(panel)
     await session.commit()
 
@@ -178,29 +158,20 @@ async def test_panel_connection(
     """
     Test connection to a panel instance.
     Only the owner or admin can test.
-    
+
     TODO: Implement actual panel API connection test.
     """
-    result = await session.execute(
-        select(PanelInstance).where(PanelInstance.id == panel_id)
-    )
+    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
     panel = result.scalar_one_or_none()
-    
+
     if not panel:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Panel not found"
-        )
-    
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
+
     # Check permissions
     if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to test this panel"
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to test this panel"
         )
-    
+
     # TODO: Implement actual connection test
-    return {
-        "success": True,
-        "message": "Connection test placeholder - implement actual API check"
-    }
+    return {"success": True, "message": "Connection test placeholder - implement actual API check"}

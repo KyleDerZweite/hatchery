@@ -27,7 +27,7 @@ async_session_maker = async_sessionmaker(
 
 async def init_db() -> None:
     """Initialize database tables.
-    
+
     Creates all tables defined in SQLModel metadata.
     In production, you might want to use Alembic migrations instead.
     """
@@ -37,7 +37,7 @@ async def init_db() -> None:
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get database session.
-    
+
     Yields an async database session that will be automatically
     closed when the request is complete.
     """
