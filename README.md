@@ -2,6 +2,8 @@
 
 **Modpack-to-Server Automation Platform**
 
+> IMPORTANT: This project is under development and is not a stable, released product. It is provided "as-is", without warranty or guarantee. It works to some extent, but may be incomplete, unstable, or contain bugs. Mentions of a version such as "v2" do not imply an official release.
+
 Hatchery allows users to input CurseForge or Modrinth modpack URLs, automatically converts them into Pterodactyl/Pelican "Egg" configurations, and deploys them to remote panels via API.
 
 ## Features
@@ -87,14 +89,14 @@ hatchery/
 
 ### Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `DATABASE_URL` | Database connection string | `sqlite:///hatchery.db` |
-| `SECRET_KEY` | JWT signing key | (generated) |
-| `CURSEFORGE_API_KEY` | CurseForge API key (optional) | - |
-| `PTERODACTYL_URL` | Panel URL for deployment | - |
-| `PTERODACTYL_API_KEY` | Panel API key | - |
-| `VITE_API_URL` | Backend API URL for frontend | `http://localhost:8000` |
+| Variable              | Description                   | Default                 |
+| --------------------- | ----------------------------- | ----------------------- |
+| `DATABASE_URL`        | Database connection string    | `sqlite:///hatchery.db` |
+| `SECRET_KEY`          | JWT signing key               | (generated)             |
+| `CURSEFORGE_API_KEY`  | CurseForge API key (optional) | -                       |
+| `PTERODACTYL_URL`     | Panel URL for deployment      | -                       |
+| `PTERODACTYL_API_KEY` | Panel API key                 | -                       |
+| `VITE_API_URL`        | Backend API URL for frontend  | `http://localhost:8000` |
 
 ### Database
 
@@ -112,6 +114,7 @@ By default, Hatchery uses SQLite for easy local setup. To use PostgreSQL:
 ## API Documentation
 
 Once running, visit:
+
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
