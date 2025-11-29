@@ -1,10 +1,11 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { panelsApi, PanelCreateData } from '@/lib/api'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -13,95 +14,111 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { toast } from '@/components/ui/use-toast'
-import { Plus, Server, Trash2, ExternalLink, CheckCircle, XCircle } from 'lucide-react'
-import { AxiosError } from 'axios'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
+import { PanelCreateData, PanelInstance, panelsApi } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import {
+  CheckCircle,
+  ExternalLink,
+  Plus,
+  Server,
+  Trash2,
+  XCircle,
+} from "lucide-react";
+import { useState } from "react";
 
 export function PanelsPage() {
-  const queryClient = useQueryClient()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [name, setName] = useState('')
-  const [url, setUrl] = useState('')
-  const [apiKey, setApiKey] = useState('')
-  const [description, setDescription] = useState('')
+  const queryClient = useQueryClient();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [description, setDescription] = useState("");
 
-  const { data: panels = [], isLoading } = useQuery({
-    queryKey: ['panels'],
+  const { data: panels = [], isLoading } = useQuery<PanelInstance[]>({
+    queryKey: ["panels"],
     queryFn: () => panelsApi.list(),
-  })
+  });
 
   const createMutation = useMutation({
     mutationFn: (data: PanelCreateData) => panelsApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['panels'] })
-      setIsDialogOpen(false)
-      resetForm()
+      queryClient.invalidateQueries({ queryKey: ["panels"] });
+      setIsDialogOpen(false);
+      resetForm();
       toast({
-        title: 'Panel added!',
-        description: 'The panel instance has been added.',
-      })
+        title: "Panel added!",
+        description: "The panel instance has been added.",
+      });
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       toast({
-        variant: 'destructive',
-        title: 'Failed to add panel',
-        description: error.response?.data?.detail || 'An error occurred',
-      })
+        variant: "destructive",
+        title: "Failed to add panel",
+        description: error.response?.data?.detail || "An error occurred",
+      });
     },
-  })
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => panelsApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['panels'] })
+      queryClient.invalidateQueries({ queryKey: ["panels"] });
       toast({
-        title: 'Panel deleted',
-        description: 'The panel instance has been removed.',
-      })
+        title: "Panel deleted",
+        description: "The panel instance has been removed.",
+      });
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       toast({
-        variant: 'destructive',
-        title: 'Failed to delete panel',
-        description: error.response?.data?.detail || 'An error occurred',
-      })
+        variant: "destructive",
+        title: "Failed to delete panel",
+        description: error.response?.data?.detail || "An error occurred",
+      });
     },
-  })
+  });
 
-  const testMutation = useMutation({
+  const testMutation = useMutation<
+    { success: boolean; message: string },
+    AxiosError<{ detail: string }>,
+    number
+  >({
     mutationFn: (id: number) => panelsApi.test(id),
     onSuccess: (data) => {
       toast({
-        title: data.success ? 'Connection successful' : 'Connection failed',
+        title: data.success ? "Connection successful" : "Connection failed",
         description: data.message,
-      })
+      });
     },
     onError: (error: AxiosError<{ detail: string }>) => {
       toast({
-        variant: 'destructive',
-        title: 'Connection test failed',
-        description: error.response?.data?.detail || 'An error occurred',
-      })
+        variant: "destructive",
+        title: "Connection test failed",
+        description: error.response?.data?.detail || "An error occurred",
+      });
     },
-  })
+  });
 
   const resetForm = () => {
-    setName('')
-    setUrl('')
-    setApiKey('')
-    setDescription('')
-  }
+    setName("");
+    setUrl("");
+    setApiKey("");
+    setDescription("");
+  };
 
   const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     createMutation.mutate({
       name,
-      url: url.replace(/\/$/, ''), // Remove trailing slash
+      url: url.replace(/\/$/, ""), // Remove trailing slash
       api_key: apiKey,
       description: description || undefined,
-    })
-  }
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -134,7 +151,9 @@ export function PanelsPage() {
                     id="name"
                     placeholder="My Game Panel"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setName(e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -145,7 +164,9 @@ export function PanelsPage() {
                     type="url"
                     placeholder="https://panel.example.com"
                     value={url}
-                    onChange={(e) => setUrl(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setUrl(e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -156,7 +177,9 @@ export function PanelsPage() {
                     type="password"
                     placeholder="Enter your panel API key"
                     value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setApiKey(e.target.value)
+                    }
                     required
                   />
                   <p className="text-xs text-muted-foreground">
@@ -169,16 +192,22 @@ export function PanelsPage() {
                     id="description"
                     placeholder="Production server panel"
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setDescription(e.target.value)
+                    }
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Adding...' : 'Add Panel'}
+                  {createMutation.isPending ? "Adding..." : "Add Panel"}
                 </Button>
               </DialogFooter>
             </form>
@@ -204,7 +233,7 @@ export function PanelsPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {panels.map((panel) => (
+          {panels.map((panel: PanelInstance) => (
             <Card key={panel.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -242,7 +271,7 @@ export function PanelsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => window.open(panel.url, '_blank')}
+                    onClick={() => window.open(panel.url, "_blank")}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
@@ -261,5 +290,5 @@ export function PanelsPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

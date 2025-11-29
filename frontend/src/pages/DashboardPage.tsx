@@ -1,33 +1,37 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
-import { eggsApi, panelsApi } from '@/lib/api'
-import { useAuth } from '@/lib/auth'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Egg, Server, Plus, ArrowRight } from 'lucide-react'
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { EggConfig, eggsApi, PanelInstance, panelsApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Egg, Plus, Server } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function DashboardPage() {
-  const { user } = useAuth()
+  const { user } = useAuth();
 
-  const { data: eggs = [] } = useQuery({
-    queryKey: ['eggs'],
+  const { data: eggs = [] } = useQuery<EggConfig[]>({
+    queryKey: ["eggs"],
     queryFn: () => eggsApi.list(),
-  })
+  });
 
-  const { data: panels = [] } = useQuery({
-    queryKey: ['panels'],
+  const { data: panels = [] } = useQuery<PanelInstance[]>({
+    queryKey: ["panels"],
     queryFn: () => panelsApi.list(),
-  })
+  });
 
-  const recentEggs = eggs.slice(0, 5)
+  const recentEggs = eggs.slice(0, 5);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back, {user?.username}!
-        </p>
+        <p className="text-muted-foreground">Welcome back, {user?.username}!</p>
       </div>
 
       {/* Stats */}
@@ -46,7 +50,9 @@ export function DashboardPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Panel Instances</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Panel Instances
+            </CardTitle>
             <Server className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -63,7 +69,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {eggs.filter(e => e.visibility === 'public').length}
+              {eggs.filter((e) => e.visibility === "public").length}
             </div>
             <p className="text-xs text-muted-foreground">
               Shared with the community
@@ -77,11 +83,9 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {eggs.filter(e => e.visibility === 'private').length}
+              {eggs.filter((e) => e.visibility === "private").length}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Only visible to you
-            </p>
+            <p className="text-xs text-muted-foreground">Only visible to you</p>
           </CardContent>
         </Card>
       </div>
@@ -121,7 +125,7 @@ export function DashboardPage() {
               </p>
             ) : (
               <div className="space-y-2">
-                {recentEggs.map((egg) => (
+                {recentEggs.map((egg: EggConfig) => (
                   <Link
                     key={egg.id}
                     to={`/eggs/${egg.id}`}
@@ -142,5 +146,5 @@ export function DashboardPage() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

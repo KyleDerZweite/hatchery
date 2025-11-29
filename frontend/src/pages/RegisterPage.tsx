@@ -1,62 +1,69 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useAuth } from '@/lib/auth'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from '@/components/ui/use-toast'
-import { Egg } from 'lucide-react'
-import { AxiosError } from 'axios'
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
+import { useAuth } from "@/lib/auth";
+import { AxiosError } from "axios";
+import { Egg } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
 export function RegisterPage() {
-  const { register } = useAuth()
-  const [isLoading, setIsLoading] = useState(false)
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const { register } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (password !== confirmPassword) {
       toast({
-        variant: 'destructive',
-        title: 'Passwords do not match',
-        description: 'Please make sure your passwords match.',
-      })
-      return
+        variant: "destructive",
+        title: "Passwords do not match",
+        description: "Please make sure your passwords match.",
+      });
+      return;
     }
 
     if (password.length < 8) {
       toast({
-        variant: 'destructive',
-        title: 'Password too short',
-        description: 'Password must be at least 8 characters.',
-      })
-      return
+        variant: "destructive",
+        title: "Password too short",
+        description: "Password must be at least 8 characters.",
+      });
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
-      await register(username, email, password)
+      await register(username, email, password);
       toast({
-        title: 'Account created!',
-        description: 'Welcome to Hatchery.',
-      })
+        title: "Account created!",
+        description: "Welcome to Hatchery.",
+      });
     } catch (error) {
-      const axiosError = error as AxiosError<{ detail: string }>
+      const axiosError = error as AxiosError<{ detail: string }>;
       toast({
-        variant: 'destructive',
-        title: 'Registration failed',
-        description: axiosError.response?.data?.detail || 'Could not create account',
-      })
+        variant: "destructive",
+        title: "Registration failed",
+        description:
+          axiosError.response?.data?.detail || "Could not create account",
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -66,9 +73,7 @@ export function RegisterPage() {
             <Egg className="h-12 w-12 text-primary" />
           </div>
           <CardTitle className="text-2xl">Create an Account</CardTitle>
-          <CardDescription>
-            Sign up to start creating eggs
-          </CardDescription>
+          <CardDescription>Sign up to start creating eggs</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -79,7 +84,9 @@ export function RegisterPage() {
                 type="text"
                 placeholder="Choose a username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setUsername(e.target.value)
+                }
                 required
                 minLength={3}
               />
@@ -91,7 +98,9 @@ export function RegisterPage() {
                 type="email"
                 placeholder="Enter your email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setEmail(e.target.value)
+                }
                 required
               />
             </div>
@@ -102,7 +111,9 @@ export function RegisterPage() {
                 type="password"
                 placeholder="Create a password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setPassword(e.target.value)
+                }
                 required
                 minLength={8}
               />
@@ -114,16 +125,18 @@ export function RegisterPage() {
                 type="password"
                 placeholder="Confirm your password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setConfirmPassword(e.target.value)
+                }
                 required
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Creating account...' : 'Create account'}
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            Already have an account?{' '}
+            Already have an account?{" "}
             <Link to="/login" className="text-primary hover:underline">
               Sign in
             </Link>
@@ -131,5 +144,5 @@ export function RegisterPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
