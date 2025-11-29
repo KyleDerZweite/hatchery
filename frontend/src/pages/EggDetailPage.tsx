@@ -4,13 +4,18 @@ import { eggsApi } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from '@/components/ui/use-toast'
-import { ArrowLeft, Download, RefreshCw, ExternalLink, Copy } from 'lucide-react'
+import { ArrowLeft, Download, RefreshCw, ExternalLink, Copy, Pencil } from 'lucide-react'
 import { AxiosError } from 'axios'
+import { useAuth } from '@/lib/auth'
+import { EditEggDialog } from '@/components/eggs/EditEggDialog'
+import { useState } from 'react'
 
 export function EggDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const [isEditOpen, setIsEditOpen] = useState(false)
 
   const { data: egg, isLoading, error } = useQuery({
     queryKey: ['egg', id],
@@ -97,6 +102,8 @@ export function EggDetailPage() {
 
   return (
     <div className="space-y-6">
+      <EditEggDialog egg={egg} open={isEditOpen} onOpenChange={setIsEditOpen} />
+      
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
@@ -116,6 +123,12 @@ export function EggDetailPage() {
             <ExternalLink className="mr-2 h-4 w-4" />
             Source
           </Button>
+          {(user?.id === egg.owner_id || user?.role === 'admin') && (
+            <Button variant="outline" onClick={() => setIsEditOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          )}
           <Button variant="outline" onClick={() => regenerateMutation.mutate()} disabled={regenerateMutation.isPending}>
             <RefreshCw className="mr-2 h-4 w-4" />
             Regenerate

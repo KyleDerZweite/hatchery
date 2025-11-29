@@ -28,13 +28,17 @@ import { toast } from "@/components/ui/use-toast";
 import { EggConfig, EggCreateData, eggsApi } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
-import { Egg, ExternalLink, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
+import { Egg, ExternalLink, Eye, EyeOff, Plus, Trash2, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
+import { EditEggDialog } from "@/components/eggs/EditEggDialog";
 
 export function EggsPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingEgg, setEditingEgg] = useState<EggConfig | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
   const [visibility, setVisibility] = useState<"private" | "public">("private");
   const [javaVersion, setJavaVersion] = useState("17");
@@ -93,6 +97,13 @@ export function EggsPage() {
 
   return (
     <div className="space-y-6">
+      {editingEgg && (
+        <EditEggDialog
+          egg={editingEgg}
+          open={!!editingEgg}
+          onOpenChange={(open) => !open && setEditingEgg(null)}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Eggs</h1>
@@ -228,6 +239,15 @@ export function EggsPage() {
                   <Button asChild size="sm" className="flex-1">
                     <Link to={`/eggs/${egg.id}`}>View Details</Link>
                   </Button>
+                  {(user?.id === egg.owner_id || user?.role === 'admin') && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditingEgg(egg)}
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
@@ -235,14 +255,16 @@ export function EggsPage() {
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteMutation.mutate(egg.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  {(user?.id === egg.owner_id || user?.role === 'admin') && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteMutation.mutate(egg.id)}
+                        disabled={deleteMutation.isPending}
+                    >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

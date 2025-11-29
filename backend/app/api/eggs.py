@@ -42,7 +42,11 @@ async def create_egg_from_url(
     java_version = egg_data.java_version or modpack_info.java_version
 
     # Generate egg JSON
-    egg_json = modpack_service.generate_egg_json(modpack_info, java_version)
+    egg_json = modpack_service.generate_egg_json(
+        modpack_info, 
+        java_version,
+        author_email=current_user.email
+    )
 
     # Create egg config
     egg = EggConfig(
@@ -130,6 +134,7 @@ async def update_egg(
     egg_update: EggConfigUpdate,
     current_user: CurrentUser,
     session: SessionDep,
+    modpack_service: Annotated[ModpackService, Depends(get_modpack_service)],
 ):
     """
     Update an egg configuration.
@@ -149,6 +154,15 @@ async def update_egg(
         )
 
     update_data = egg_update.model_dump(exclude_unset=True)
+
+    # Handle Java version update for JSON data
+    if "java_version" in update_data:
+        egg.json_data = modpack_service.update_egg_json_for_java(
+            egg.json_data,
+            update_data["java_version"],
+            egg.modloader
+        )
+
     for key, value in update_data.items():
         setattr(egg, key, value)
 
@@ -241,7 +255,11 @@ async def regenerate_egg(
     modpack_info = await modpack_service.fetch_modpack_info(egg.source_url)
 
     # Regenerate egg JSON
-    egg_json = modpack_service.generate_egg_json(modpack_info, egg.java_version)
+    egg_json = modpack_service.generate_egg_json(
+        modpack_info, 
+        egg.java_version,
+        author_email=current_user.email
+    )
 
     # Update egg
     egg.json_data = egg_json

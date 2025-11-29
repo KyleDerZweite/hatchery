@@ -344,6 +344,7 @@ class ModpackService:
         self,
         modpack_info: ModpackInfo,
         java_version: int | None = None,
+        author_email: str | None = None,
     ) -> dict[str, Any]:
         """
         Generate a Pterodactyl egg JSON configuration.
@@ -351,6 +352,7 @@ class ModpackService:
         Args:
             modpack_info: Parsed modpack information
             java_version: Override Java version (uses detected version if None)
+            author_email: Email of the author to set in the egg config
 
         Returns:
             Pterodactyl-compatible egg JSON structure
@@ -364,7 +366,7 @@ class ModpackService:
             "meta": {"version": "PTDL_v2", "update_url": None},
             "exported_at": datetime.now(UTC).isoformat(),
             "name": modpack_info.name,
-            "author": "hatchery@generated.local",
+            "author": author_email or "hatchery@generated.local",
             "description": modpack_info.description
             or f"Generated {modloader.value.title()} server for {modpack_info.name}",
             "features": ["eula", "java_version", "pid_limit"],
@@ -387,6 +389,46 @@ class ModpackService:
             "variables": self._get_variables(modpack_info, modloader, java_ver),
         }
 
+        return egg_json
+
+    def update_egg_json_for_java(
+        self,
+        egg_json: dict[str, Any],
+        java_version: int,
+        modloader: str | None = None,
+    ) -> dict[str, Any]:
+        """
+        Update egg JSON for a new Java version.
+
+        Updates:
+        - Docker images
+        - Startup command
+        - Installation script container
+        """
+        # Update docker images
+        egg_json["docker_images"] = self._get_docker_images(java_version)
+
+        # Determine modloader from existing JSON or argument
+        # This is a bit tricky since we don't store the enum in JSON
+        # We'll try to infer it from the startup command or description if not provided
+        # For now, we'll assume the caller passes it or we default to FORGE if unknown,
+        # but really we should try to preserve the existing startup structure if possible.
+        # However, _get_startup_command is robust enough.
+        
+        # Safer approach: Use the modloader stored in EggConfig if passed, otherwise try to guess
+        modloader_enum = ModpackType.FORGE
+        if modloader:
+            try:
+                modloader_enum = ModpackType(modloader.lower())
+            except ValueError:
+                pass
+
+        egg_json["startup"] = self._get_startup_command(modloader_enum, java_version)
+        
+        # Update installation container
+        if "scripts" in egg_json and "installation" in egg_json["scripts"]:
+            egg_json["scripts"]["installation"]["container"] = f"eclipse-temurin:{java_version}-jdk"
+            
         return egg_json
 
     def _get_docker_images(self, java_version: int) -> dict[str, str]:
