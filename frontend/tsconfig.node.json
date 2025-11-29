@@ -5,4 +5,10 @@
     "module": "esnext",
     "resolveJsonModule": true
   }
+  ,
+  "baseUrl": ".",
+  "paths": {
+    "@/*": ["./src/*"]
+  },
+  "include": ["src"]
 }
