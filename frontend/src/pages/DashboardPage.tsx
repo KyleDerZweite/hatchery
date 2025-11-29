@@ -39,11 +39,13 @@ export function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Eggs</CardTitle>
-            <Egg className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Egg className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{eggs.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{eggs.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Generated egg configurations
             </p>
           </CardContent>
@@ -53,11 +55,13 @@ export function DashboardPage() {
             <CardTitle className="text-sm font-medium">
               Panel Instances
             </CardTitle>
-            <Server className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Server className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{panels.length}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-3xl font-bold">{panels.length}</div>
+            <p className="text-xs text-muted-foreground mt-1">
               Connected game panels
             </p>
           </CardContent>
@@ -65,13 +69,15 @@ export function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Public Eggs</CardTitle>
-            <Egg className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Egg className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold">
               {eggs.filter((e) => e.visibility === "public").length}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mt-1">
               Shared with the community
             </p>
           </CardContent>
@@ -79,13 +85,15 @@ export function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Private Eggs</CardTitle>
-            <Egg className="h-4 w-4 text-muted-foreground" />
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Egg className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold">
               {eggs.filter((e) => e.visibility === "private").length}
             </div>
-            <p className="text-xs text-muted-foreground">Only visible to you</p>
+            <p className="text-xs text-muted-foreground mt-1">Only visible to you</p>
           </CardContent>
         </Card>
       </div>
