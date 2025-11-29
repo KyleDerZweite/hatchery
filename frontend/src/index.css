@@ -6,12 +6,12 @@
   :root {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 224 71% 4%;
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 142.1 70.6% 45.3%;
-    --primary-foreground: 144.9 80.4% 10%;
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 40% 98%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -22,8 +22,8 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 142.4 71.8% 29.2%;
-    --radius: 0.5rem;
+    --ring: 263.4 70% 50.4%;
+    --radius: 0.75rem;
   }
 }
 
@@ -33,5 +33,38 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-wood {
+    background: 
+      linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),
+      repeating-linear-gradient(
+        45deg,
+        #3e2723 0px,
+        #3e2723 2px,
+        #4e342e 2px,
+        #4e342e 4px
+      );
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-vine {
+    @apply relative border-primary/20 overflow-hidden;
+  }
+  
+  .card-vine::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      radial-gradient(circle at top right, rgba(120, 255, 120, 0.05), transparent 40%),
+      radial-gradient(circle at bottom left, rgba(120, 255, 120, 0.05), transparent 40%);
+    pointer-events: none;
   }
 }

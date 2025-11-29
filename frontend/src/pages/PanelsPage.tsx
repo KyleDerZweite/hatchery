@@ -121,17 +121,17 @@ export function PanelsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="bg-wood rounded-xl p-8 shadow-lg border border-white/5 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Panels</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-white mb-1">Panels</h1>
+          <p className="text-white/80">
             Manage your Pterodactyl/Pelican panel instances
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-primary hover:bg-primary/90 text-white border-none shadow-lg">
               <Plus className="mr-2 h-4 w-4" />
               Add Panel
             </Button>
@@ -218,7 +218,7 @@ export function PanelsPage() {
       {isLoading ? (
         <div className="text-center py-8">Loading panels...</div>
       ) : panels.length === 0 ? (
-        <Card>
+        <Card className="card-vine bg-card/50 border-primary/10">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Server className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No panels connected</h3>
@@ -232,14 +232,14 @@ export function PanelsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {panels.map((panel: PanelInstance) => (
-            <Card key={panel.id}>
+            <Card key={panel.id} className="card-vine bg-card/50 border-primary/10 transition-all hover:border-primary/30">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-lg">{panel.name}</CardTitle>
-                    <CardDescription className="truncate max-w-[200px]">
+                    <CardDescription className="truncate max-w-[200px] text-muted-foreground/70">
                       {panel.url}
                     </CardDescription>
                   </div>
@@ -254,15 +254,15 @@ export function PanelsPage() {
               </CardHeader>
               <CardContent>
                 {panel.description && (
-                  <p className="text-sm text-muted-foreground mb-4">
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                     {panel.description}
                   </p>
                 )}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mt-2">
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="flex-1"
+                    variant="ghost"
+                    className="flex-1 border border-primary/20 hover:bg-primary/10 hover:text-primary"
                     onClick={() => testMutation.mutate(panel.id)}
                     disabled={testMutation.isPending}
                   >
@@ -270,18 +270,20 @@ export function PanelsPage() {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="ghost"
+                    className="hover:bg-primary/10 hover:text-primary"
                     onClick={() => window.open(panel.url, "_blank")}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="ghost"
+                    className="hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => deleteMutation.mutate(panel.id)}
                     disabled={deleteMutation.isPending}
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </CardContent>

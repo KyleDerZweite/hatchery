@@ -96,7 +96,7 @@ export function EggsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {editingEgg && (
         <EditEggDialog
           egg={editingEgg}
@@ -104,16 +104,16 @@ export function EggsPage() {
           onOpenChange={(open) => !open && setEditingEgg(null)}
         />
       )}
-      <div className="flex items-center justify-between">
+      <div className="bg-wood rounded-xl p-8 shadow-lg border border-white/5 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Eggs</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold text-white mb-1">Eggs</h1>
+          <p className="text-white/80">
             Manage your Pterodactyl egg configurations
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-primary hover:bg-primary/90 text-white border-none shadow-lg">
               <Plus className="mr-2 h-4 w-4" />
               New Egg
             </Button>
@@ -197,7 +197,7 @@ export function EggsPage() {
       {isLoading ? (
         <div className="text-center py-8">Loading eggs...</div>
       ) : eggs.length === 0 ? (
-        <Card>
+        <Card className="card-vine bg-card/50 border-primary/10">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Egg className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No eggs yet</h3>
@@ -213,7 +213,7 @@ export function EggsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {eggs.map((egg: EggConfig) => (
-            <Card key={egg.id}>
+            <Card key={egg.id} className="card-vine bg-card/50 border-primary/10 transition-all hover:border-primary/30">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -224,7 +224,7 @@ export function EggsPage() {
                   </div>
                   <div className="flex items-center gap-1">
                     {egg.visibility === "public" ? (
-                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <Eye className="h-4 w-4 text-primary" />
                     ) : (
                       <EyeOff className="h-4 w-4 text-muted-foreground" />
                     )}
@@ -236,13 +236,14 @@ export function EggsPage() {
                   {egg.description || "No description"}
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button asChild size="sm" className="flex-1">
+                  <Button asChild size="sm" className="flex-1 bg-primary/20 hover:bg-primary/30 text-primary-foreground border border-primary/20">
                     <Link to={`/eggs/${egg.id}`}>View Details</Link>
                   </Button>
                   {(user?.id === egg.owner_id || user?.role === 'admin') && (
                     <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
+                        className="hover:bg-primary/10 hover:text-primary"
                         onClick={() => setEditingEgg(egg)}
                     >
                         <Pencil className="h-4 w-4" />
@@ -250,7 +251,8 @@ export function EggsPage() {
                   )}
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="ghost"
+                    className="hover:bg-primary/10 hover:text-primary"
                     onClick={() => window.open(egg.source_url, "_blank")}
                   >
                     <ExternalLink className="h-4 w-4" />
@@ -258,11 +260,12 @@ export function EggsPage() {
                   {(user?.id === egg.owner_id || user?.role === 'admin') && (
                     <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
+                        className="hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => deleteMutation.mutate(egg.id)}
                         disabled={deleteMutation.isPending}
                     >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4" />
                     </Button>
                   )}
                 </div>

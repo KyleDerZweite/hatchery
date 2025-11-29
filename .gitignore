@@ -68,3 +68,6 @@ htmlcov/
 
 # Legacy
 legacy/
+
+# Misc
+frontend/inspiration/
