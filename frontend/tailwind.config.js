@@ -21,9 +21,10 @@ export default {
           DEFAULT: "hsl(var(--sidebar))",
           foreground: "hsl(var(--sidebar-foreground))",
         },
-        wood: {
-          DEFAULT: "hsl(var(--wood))",
-          foreground: "hsl(var(--wood-foreground))",
+
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
         primary: {
           DEFAULT: "hsl(var(--primary))",

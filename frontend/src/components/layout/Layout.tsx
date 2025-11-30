@@ -1,18 +1,18 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
-import { 
-  LayoutDashboard, 
-  Egg, 
-  Server, 
-  Settings, 
-  LogOut,
-  Menu,
-  X,
-  Sprout
+import { useAuth } from '@/lib/auth'
+import { cn } from '@/lib/utils'
+import {
+    Egg,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    Server,
+    Settings,
+    Sprout,
+    X
 } from 'lucide-react'
 import { useState } from 'react'
-import { cn } from '@/lib/utils'
+import { Link, Outlet, useLocation } from 'react-router-dom'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -39,20 +39,22 @@ export function Layout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[180px] transform bg-sidebar border-r border-white/5 transition-transform duration-200 ease-in-out lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-[280px] transform bg-sidebar/95 backdrop-blur-xl border-r border-success/10 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         {/* Brand Header */}
-        <div className="flex h-20 items-center px-6 border-b border-white/5">
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <Sprout className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold text-white tracking-tight">Hatchery</span>
+        <div className="flex h-24 items-center px-8 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
+          <Link to="/dashboard" className="flex items-center gap-3 group">
+            <div className="p-2 rounded-xl bg-success/10 group-hover:bg-success/20 transition-colors">
+              <Sprout className="h-6 w-6 text-success" />
+            </div>
+            <span className="text-xl font-bold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Hatchery</span>
           </Link>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="lg:hidden ml-auto"
+            className="lg:hidden ml-auto hover:bg-white/5 text-muted-foreground hover:text-white"
             onClick={() => setSidebarOpen(false)}
           >
             <X className="h-5 w-5" />
@@ -60,7 +62,7 @@ export function Layout() {
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex flex-col gap-1 p-4 mt-2">
+        <nav className="flex flex-col gap-2 p-4 mt-4">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/')
             return (
@@ -68,17 +70,17 @@ export function Layout() {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-r-lg px-3 py-2.5 text-sm font-medium transition-all group relative overflow-hidden",
+                  "flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group relative overflow-hidden",
                   isActive
-                    ? "bg-card text-white"
+                    ? "bg-primary/10 text-primary shadow-[0_0_20px_rgba(139,92,246,0.1)]"
                     : "text-muted-foreground hover:bg-white/5 hover:text-white"
                 )}
                 onClick={() => setSidebarOpen(false)}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-primary rounded-r-full shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
                 )}
-                <item.icon className={cn("h-[18px] w-[18px] transition-colors", isActive ? "text-primary" : "group-hover:text-white")} />
+                <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "group-hover:text-white")} />
                 <span>{item.name}</span>
               </Link>
             )
@@ -86,31 +88,33 @@ export function Layout() {
         </nav>
 
         {/* User Profile */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-white/5 p-4 bg-sidebar">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="h-8 w-8 rounded-full bg-card border border-white/10 flex items-center justify-center shrink-0">
-              <span className="text-xs font-bold text-primary">
-                {user?.username?.[0]?.toUpperCase() || 'U'}
-              </span>
+        <div className="absolute bottom-0 left-0 right-0 border-t border-white/5 p-6 bg-gradient-to-t from-black/20 to-transparent">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 p-[1px] shadow-lg shadow-primary/20">
+              <div className="h-full w-full rounded-[11px] bg-sidebar flex items-center justify-center">
+                <span className="text-sm font-bold text-primary">
+                  {user?.username?.[0]?.toUpperCase() || 'U'}
+                </span>
+              </div>
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-medium text-white truncate">{user?.username}</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">{user?.role || 'User'}</span>
+              <span className="text-sm font-semibold text-white truncate">{user?.username}</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{user?.role || 'User'}</span>
             </div>
           </div>
           <Button 
             variant="ghost" 
-            className="w-full justify-start text-muted-foreground hover:text-white hover:bg-white/5 h-8 text-xs mt-1" 
+            className="w-full justify-start text-muted-foreground hover:text-red-400 hover:bg-red-500/10 h-9 text-xs font-medium transition-colors" 
             onClick={logout}
           >
-            <LogOut className="h-3 w-3 mr-2" />
+            <LogOut className="h-3.5 w-3.5 mr-2" />
             Sign Out
           </Button>
         </div>
       </aside>
 
       {/* Main content */}
-      <div className="lg:pl-[180px] min-h-screen flex flex-col transition-all duration-200">
+      <div className="lg:pl-[240px] min-h-screen flex flex-col transition-all duration-300">
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-white/5 bg-sidebar px-6">
           <Button
@@ -123,11 +127,12 @@ export function Layout() {
           <span className="font-bold text-lg">Hatchery</span>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full">
+        {/* Main Content */}
+      <main className="flex-1 min-h-screen transition-all duration-300 lg:ml-[280px]">
+        <div className="container mx-auto p-6 md:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
           <Outlet />
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }

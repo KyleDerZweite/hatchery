@@ -1,14 +1,14 @@
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { eggsApi } from '@/lib/api'
+import { EditEggDialog } from '@/components/eggs/EditEggDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from '@/components/ui/use-toast'
-import { ArrowLeft, Download, RefreshCw, ExternalLink, Copy, Pencil } from 'lucide-react'
-import { AxiosError } from 'axios'
+import { eggsApi } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { EditEggDialog } from '@/components/eggs/EditEggDialog'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
+import { ArrowLeft, Copy, Download, ExternalLink, Pencil, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 export function EggDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -104,7 +104,7 @@ export function EggDetailPage() {
     <div className="space-y-8">
       <EditEggDialog egg={egg} open={isEditOpen} onOpenChange={setIsEditOpen} />
       
-      <div className="bg-wood rounded-xl p-8 shadow-lg border border-white/5 flex items-center justify-between">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-success/10 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild className="text-white hover:bg-white/20">
             <Link to="/eggs">
@@ -157,7 +157,7 @@ export function EggDetailPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="card-vine bg-card/50 border-primary/10">
+        <Card className="card-vine">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Minecraft Version</CardTitle>
           </CardHeader>
@@ -165,7 +165,7 @@ export function EggDetailPage() {
             <p className="text-2xl font-bold">{egg.minecraft_version || 'Unknown'}</p>
           </CardContent>
         </Card>
-        <Card className="card-vine bg-card/50 border-primary/10">
+        <Card className="card-vine">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Modloader</CardTitle>
           </CardHeader>
@@ -178,7 +178,7 @@ export function EggDetailPage() {
             )}
           </CardContent>
         </Card>
-        <Card className="card-vine bg-card/50 border-primary/10">
+        <Card className="card-vine">
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Java Version</CardTitle>
           </CardHeader>
@@ -188,7 +188,7 @@ export function EggDetailPage() {
         </Card>
       </div>
 
-      <Card className="card-vine bg-card/50 border-primary/10">
+      <Card className="card-vine">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -204,14 +204,14 @@ export function EggDetailPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <pre className="bg-black/30 border border-primary/10 p-4 rounded-lg overflow-auto max-h-96 text-sm">
+          <pre className="bg-black/30 border border-success/10 p-4 rounded-lg overflow-auto max-h-96 text-sm">
             {JSON.stringify(egg.json_data, null, 2)}
           </pre>
         </CardContent>
       </Card>
 
       {egg.description && (
-        <Card className="card-vine bg-card/50 border-primary/10">
+        <Card className="card-vine">
           <CardHeader>
             <CardTitle>Description</CardTitle>
           </CardHeader>

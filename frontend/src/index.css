@@ -4,42 +4,44 @@
 
 @layer base {
   :root {
-    --background: 240 28% 14%; /* #1a1a2e */
-    --foreground: 0 0% 100%;   /* #ffffff */
+    --background: 240 10% 4%;  /* #09090b - Zinc 950 */
+    --foreground: 0 0% 98%;    /* #fafafa */
     
-    --card: 240 20% 22%;       /* #2d2d44 */
-    --card-foreground: 0 0% 100%;
+    --card: 240 6% 10%;        /* #18181b - Zinc 900 */
+    --card-foreground: 0 0% 98%;
 
-    --popover: 240 20% 22%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 142 71% 58%;    /* #4ade80 */
-    --primary-foreground: 240 22% 9%;
+    --primary: 262 83% 58%;    /* #8b5cf6 - Violet 500 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 20% 22%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 240 4% 16%;   /* #27272a - Zinc 800 */
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 20% 22%;
-    --muted-foreground: 240 9% 66%; /* #a0a0b0 */
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 240 20% 22%;
+    --accent: 262 83% 58%;
     --accent-foreground: 0 0% 100%;
+    
+    --success: 167 68% 45%;    /* #25c2a0 - Brand Green */
+    --success-foreground: 0 0% 100%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 20% 22%;
-    --input: 240 20% 22%;
-    --ring: 142 71% 58%;
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 262 83% 58%;
     
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     /* Custom Variables */
-    --sidebar: 240 22% 9%;     /* #12121c */
-    --sidebar-foreground: 240 9% 66%;
+    --sidebar: 0 0% 0%;        /* #000000 - Black */
+    --sidebar-foreground: 240 5% 65%;
     
-    --wood: 19 29% 28%;        /* #5c4033 */
-    --wood-foreground: 0 0% 100%;
+
   }
 }
 
@@ -53,22 +55,21 @@
 }
 
 @layer utilities {
-  .bg-wood {
-    background-color: #5c4033;
-    background-image: 
-      linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.1), rgba(0,0,0,0.4)),
-      url('/assets/wood.jpg');
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+
+  
+  .text-success {
+    color: hsl(var(--success));
+  }
+  
+  .bg-success {
+    background-color: hsl(var(--success));
   }
 
   .card-vine {
     @apply relative overflow-hidden;
   }
 
-  .card-vine::before {
+  /* .card-vine::before {
     content: "";
     position: absolute;
     top: -10px;
@@ -82,7 +83,7 @@
     pointer-events: none;
     opacity: 0.4;
     z-index: 0;
-  }
+  } */
   
   .card-vine > * {
     position: relative;

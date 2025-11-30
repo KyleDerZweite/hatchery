@@ -1,19 +1,19 @@
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,12 +22,12 @@ import { PanelCreateData, PanelInstance, panelsApi } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import {
-  CheckCircle,
-  ExternalLink,
-  Plus,
-  Server,
-  Trash2,
-  XCircle,
+    CheckCircle,
+    ExternalLink,
+    Plus,
+    Server,
+    Trash2,
+    XCircle,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -122,7 +122,7 @@ export function PanelsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-wood rounded-xl p-8 shadow-lg border border-white/5 flex items-center justify-between">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-success/10 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-1">Panels</h1>
           <p className="text-white/80">
@@ -218,7 +218,7 @@ export function PanelsPage() {
       {isLoading ? (
         <div className="text-center py-8">Loading panels...</div>
       ) : panels.length === 0 ? (
-        <Card className="card-vine bg-card/50 border-primary/10">
+        <Card className="card-vine">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Server className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No panels connected</h3>
@@ -234,7 +234,7 @@ export function PanelsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {panels.map((panel: PanelInstance) => (
-            <Card key={panel.id} className="card-vine bg-card/50 border-primary/10 transition-all hover:border-primary/30">
+            <Card key={panel.id} className="card-vine transition-all hover:border-primary/30">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -245,7 +245,7 @@ export function PanelsPage() {
                   </div>
                   <div className="flex items-center">
                     {panel.is_active ? (
-                      <CheckCircle className="h-5 w-5 text-green-500" />
+                      <CheckCircle className="h-5 w-5 text-success" />
                     ) : (
                       <XCircle className="h-5 w-5 text-red-500" />
                     )}

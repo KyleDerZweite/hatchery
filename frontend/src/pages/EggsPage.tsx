@@ -1,38 +1,38 @@
+import { EditEggDialog } from "@/components/eggs/EditEggDialog";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { EggConfig, EggCreateData, eggsApi } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
-import { Egg, ExternalLink, Eye, EyeOff, Plus, Trash2, Pencil } from "lucide-react";
+import { Egg, ExternalLink, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/lib/auth";
-import { EditEggDialog } from "@/components/eggs/EditEggDialog";
 
 export function EggsPage() {
   const queryClient = useQueryClient();
@@ -104,16 +104,14 @@ export function EggsPage() {
           onOpenChange={(open) => !open && setEditingEgg(null)}
         />
       )}
-      <div className="bg-wood rounded-xl p-8 shadow-lg border border-white/5 flex items-center justify-between">
+      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-success/10 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Eggs</h1>
-          <p className="text-white/80">
-            Manage your Pterodactyl egg configurations
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Eggs</h1>
+          <p className="text-muted-foreground">Manage your Pterodactyl egg configurations</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-white border-none shadow-lg">
+            <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" />
               New Egg
             </Button>
@@ -197,23 +195,24 @@ export function EggsPage() {
       {isLoading ? (
         <div className="text-center py-8">Loading eggs...</div>
       ) : eggs.length === 0 ? (
-        <Card className="card-vine bg-card/50 border-primary/10">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Egg className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No eggs yet</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Create your first egg from a modpack URL to get started.
-            </p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Your First Egg
-            </Button>
-          </CardContent>
-        </Card>
+        <Card className="py-12">
+        <div className="flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-4">
+            <Egg className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">No eggs yet</h3>
+          <p className="text-muted-foreground mb-6">
+            Create your first egg from a modpack URL to get started.
+          </p>
+          <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+            <Plus className="mr-2 h-4 w-4" /> Create Your First Egg
+          </Button>
+        </div>
+      </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {eggs.map((egg: EggConfig) => (
-            <Card key={egg.id} className="card-vine bg-card/50 border-primary/10 transition-all hover:border-primary/30">
+            <Card key={egg.id} className="card-vine transition-all hover:border-primary/30">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
