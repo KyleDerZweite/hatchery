@@ -127,7 +127,7 @@ export function Layout() {
       </aside>
 
       {/* Main content */}
-      <div className="lg:pl-[240px] min-h-screen flex flex-col transition-all duration-300">
+      <div className="lg:pl-[280px] min-h-screen flex flex-col transition-all duration-300">
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-white/5 bg-sidebar px-6">
           <Button
@@ -141,7 +141,7 @@ export function Layout() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 min-h-screen transition-all duration-300 lg:ml-[280px]">
+        <main className="flex-1 min-h-screen transition-all duration-300">
           <div className="container mx-auto p-6 md:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             <Outlet />
           </div>
