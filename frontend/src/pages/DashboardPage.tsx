@@ -9,7 +9,7 @@ import {
 import { EggConfig, eggsApi, PanelInstance, panelsApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Egg, Plus, Server, Lock, Globe } from "lucide-react";
+import { ArrowRight, Egg, Plus, FileText, Lock, Unlock, Server } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function DashboardPage() {
@@ -28,53 +28,48 @@ export function DashboardPage() {
   const recentEggs = eggs.slice(0, 5);
 
   return (
-    <div className="space-y-8">
-      <div className="bg-wood rounded-xl p-8 shadow-lg border border-white/5">
-        <h1 className="text-4xl font-bold text-white mb-2 text-shadow-sm">Dashboard</h1>
-        <p className="text-white/80 text-lg">Welcome back, {user?.username}!</p>
+    <div className="space-y-8 pt-8">
+      {/* Page Header */}
+      <div className="px-2">
+        <h1 className="text-[32px] font-bold text-white mb-1">Dashboard</h1>
+        <p className="text-base text-muted-foreground">Welcome back, {user?.username}!</p>
       </div>
 
       {/* Stats */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="card-vine bg-card/50 border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Eggs</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <Egg className="h-5 w-5 text-primary" />
-            </div>
+        <Card className="card-vine bg-card border-none shadow-lg min-h-[120px] relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-white">Total Eggs</CardTitle>
+            <Egg className="h-5 w-5 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{eggs.length}</div>
+          <CardContent className="relative z-10">
+            <div className="text-[48px] font-bold text-white leading-tight">{eggs.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Generated egg configurations
             </p>
           </CardContent>
         </Card>
-        <Card className="card-vine bg-card/50 border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="card-vine bg-card border-none shadow-lg min-h-[120px] relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-white">
               Panel Instances
             </CardTitle>
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <Server className="h-5 w-5 text-primary" />
-            </div>
+            <FileText className="h-5 w-5 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{panels.length}</div>
+          <CardContent className="relative z-10">
+            <div className="text-[48px] font-bold text-white leading-tight">{panels.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Connected game panels
             </p>
           </CardContent>
         </Card>
-        <Card className="card-vine bg-card/50 border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Public Eggs</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <Globe className="h-5 w-5 text-primary" />
-            </div>
+        <Card className="card-vine bg-card border-none shadow-lg min-h-[120px] relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-white">Public Eggs</CardTitle>
+            <Unlock className="h-5 w-5 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
+          <CardContent className="relative z-10">
+            <div className="text-[48px] font-bold text-white leading-tight">
               {eggs.filter((e) => e.visibility === "public").length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -82,15 +77,13 @@ export function DashboardPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="card-vine bg-card/50 border-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Private Eggs</CardTitle>
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center ring-1 ring-primary/50 shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <Lock className="h-5 w-5 text-primary" />
-            </div>
+        <Card className="card-vine bg-card border-none shadow-lg min-h-[120px] relative overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-sm font-medium text-white">Private Eggs</CardTitle>
+            <Lock className="h-5 w-5 text-primary" />
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
+          <CardContent className="relative z-10">
+            <div className="text-[48px] font-bold text-white leading-tight">
               {eggs.filter((e) => e.visibility === "private").length}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Only visible to you</p>
@@ -98,39 +91,51 @@ export function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
+      {/* Bottom Section */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="card-vine bg-card/50 border-primary/10">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Get started with common tasks</CardDescription>
+        {/* Quick Actions */}
+        <Card className="card-vine bg-card border-none shadow-lg relative overflow-hidden">
+          <CardHeader className="relative z-10">
+            <CardTitle className="text-2xl font-bold text-white">Quick Actions</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">Get started with common tasks</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4">
-            <Button asChild className="w-full bg-wood hover:opacity-90 border-none h-14 text-lg font-semibold shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <CardContent className="grid gap-4 relative z-10">
+            <Button asChild className="w-full bg-wood hover:opacity-90 border-none h-auto py-3 text-sm font-medium shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] rounded-lg justify-start px-4">
               <Link to="/eggs">
-                <Plus className="mr-2 h-5 w-5 text-white" />
+                <div className="bg-primary/20 p-1 rounded-full mr-3">
+                  <Plus className="h-4 w-4 text-primary" />
+                </div>
                 <span className="text-white">Create New Egg</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="w-full border-primary/20 hover:bg-primary/10 hover:text-primary h-14 text-lg bg-transparent">
+            <Button asChild className="w-full bg-wood hover:opacity-90 border-none h-auto py-3 text-sm font-medium shadow-md transition-all hover:scale-[1.02] active:scale-[0.98] rounded-lg justify-start px-4">
               <Link to="/panels">
-                <Server className="mr-2 h-5 w-5" />
-                Add Panel Instance
+                <div className="bg-primary/20 p-1 rounded-full mr-3">
+                  <Server className="h-4 w-4 text-primary" />
+                </div>
+                <span className="text-white">Add Panel Instance</span>
               </Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="card-vine bg-card/50 border-primary/10">
-          <CardHeader>
-            <CardTitle>Recent Eggs</CardTitle>
-            <CardDescription>Your latest egg configurations</CardDescription>
+        {/* Recent Eggs */}
+        <Card className="card-vine bg-card border-none shadow-lg relative overflow-hidden">
+          <CardHeader className="relative z-10">
+            <CardTitle className="text-2xl font-bold text-white">Recent Eggs</CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">Your latest egg configurations</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {recentEggs.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <Egg className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-8 text-center min-h-[200px]">
+                <div className="relative h-32 w-32 mb-4 opacity-60">
+                  <img 
+                    src="/assets/flower_in_between_decoration-removebg-preview.png" 
+                    alt="Empty state plant" 
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
                   No eggs created yet
                 </p>
               </div>
@@ -140,10 +145,10 @@ export function DashboardPage() {
                   <Link
                     key={egg.id}
                     to={`/eggs/${egg.id}`}
-                    className="flex items-center justify-between rounded-lg border border-primary/10 p-4 hover:bg-primary/10 transition-colors bg-black/20"
+                    className="flex items-center justify-between rounded-lg border border-white/5 p-4 hover:bg-white/5 transition-colors bg-[#1a1a2e]/50"
                   >
                     <div>
-                      <p className="font-medium text-primary-foreground">{egg.name}</p>
+                      <p className="font-medium text-white">{egg.name}</p>
                       <p className="text-xs text-muted-foreground capitalize">
                         {egg.source} • Java {egg.java_version}
                       </p>
