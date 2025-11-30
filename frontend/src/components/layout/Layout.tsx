@@ -1,36 +1,36 @@
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/lib/auth'
-import { cn } from '@/lib/utils'
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import {
-    Egg,
-    LayoutDashboard,
-    LogOut,
-    Menu,
-    Server,
-    Settings,
-    Sprout,
-    X
-} from 'lucide-react'
-import { useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+  Egg,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Server,
+  Settings,
+  Sprout,
+  X,
+} from "lucide-react";
+import { useState } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Eggs', href: '/eggs', icon: Egg },
-  { name: 'Panels', href: '/panels', icon: Server },
-  { name: 'Settings', href: '/settings', icon: Settings },
-]
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Eggs", href: "/eggs", icon: Egg },
+  { name: "Panels", href: "/panels", icon: Server },
+  { name: "Settings", href: "/settings", icon: Settings },
+];
 
 export function Layout() {
-  const { user, logout } = useAuth()
-  const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user, logout } = useAuth();
+  const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -49,11 +49,13 @@ export function Layout() {
             <div className="p-2 rounded-xl bg-success/10 group-hover:bg-success/20 transition-colors">
               <Sprout className="h-6 w-6 text-success" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">Hatchery</span>
+            <span className="text-xl font-bold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+              Hatchery
+            </span>
           </Link>
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             className="lg:hidden ml-auto hover:bg-white/5 text-muted-foreground hover:text-white"
             onClick={() => setSidebarOpen(false)}
           >
@@ -64,7 +66,9 @@ export function Layout() {
         {/* Navigation Menu */}
         <nav className="flex flex-col gap-2 p-4 mt-4">
           {navigation.map((item) => {
-            const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + '/')
+            const isActive =
+              location.pathname === item.href ||
+              location.pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.name}
@@ -80,10 +84,15 @@ export function Layout() {
                 {isActive && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-primary rounded-r-full shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
                 )}
-                <item.icon className={cn("h-5 w-5 transition-colors", isActive ? "text-primary" : "group-hover:text-white")} />
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 transition-colors",
+                    isActive ? "text-primary" : "group-hover:text-white"
+                  )}
+                />
                 <span>{item.name}</span>
               </Link>
-            )
+            );
           })}
         </nav>
 
@@ -93,18 +102,22 @@ export function Layout() {
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 p-[1px] shadow-lg shadow-primary/20">
               <div className="h-full w-full rounded-[11px] bg-sidebar flex items-center justify-center">
                 <span className="text-sm font-bold text-primary">
-                  {user?.username?.[0]?.toUpperCase() || 'U'}
+                  {user?.username?.[0]?.toUpperCase() || "U"}
                 </span>
               </div>
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-semibold text-white truncate">{user?.username}</span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">{user?.role || 'User'}</span>
+              <span className="text-sm font-semibold text-white truncate">
+                {user?.username}
+              </span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
+                {user?.role || "User"}
+              </span>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-muted-foreground hover:text-red-400 hover:bg-red-500/10 h-9 text-xs font-medium transition-colors" 
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-muted-foreground hover:text-red-400 hover:bg-red-500/10 h-9 text-xs font-medium transition-colors"
             onClick={logout}
           >
             <LogOut className="h-3.5 w-3.5 mr-2" />
@@ -128,11 +141,12 @@ export function Layout() {
         </header>
 
         {/* Main Content */}
-      <main className="flex-1 min-h-screen transition-all duration-300 lg:ml-[280px]">
-        <div className="container mx-auto p-6 md:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <Outlet />
-        </div>
-      </main>
+        <main className="flex-1 min-h-screen transition-all duration-300 lg:ml-[280px]">
+          <div className="container mx-auto p-6 md:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <Outlet />
+          </div>
+        </main>
+      </div>
     </div>
-  )
+  );
 }
