@@ -6,6 +6,8 @@
 
 > IMPORTANT: This project is under development and is not a stable, released product. It is provided "as-is", without warranty or guarantee. It works to some extent, but may be incomplete, unstable, or contain bugs. Mentions of a version such as "v2" do not imply an official release.
 
+The website is currently functional, however, the functionality is not fully tested/verified, and egg deployment (even for Modrinth) has not been thoroughly tested. Currently, only Modrinth parsing is implemented, as CurseForge integration would require an API key, making the process significantly more complex without one.
+
 Hatchery allows users to input CurseForge or Modrinth modpack URLs, automatically converts them into Pterodactyl/Pelican "Egg" configurations, and deploys them to remote panels via API.
 
 ## Features
