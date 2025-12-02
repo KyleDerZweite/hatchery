@@ -1,48 +1,48 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth } from './lib/auth'
-import { Layout } from './components/layout/Layout'
-import { LoginPage } from './pages/LoginPage'
-import { RegisterPage } from './pages/RegisterPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { EggsPage } from './pages/EggsPage'
-import { EggDetailPage } from './pages/EggDetailPage'
-import { PanelsPage } from './pages/PanelsPage'
-import { SettingsPage } from './pages/SettingsPage'
+import { Navigate, Route, Routes } from "react-router-dom";
+import { Layout } from "./components/layout/Layout";
+import { useAuth } from "./lib/auth";
+import { DashboardPage } from "./pages/DashboardPage";
+import { EggDetailPage } from "./pages/EggDetailPage";
+import { EggsPage } from "./pages/EggsPage";
+import { LoginPage } from "./pages/LoginPage";
+import { PanelsPage } from "./pages/PanelsPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-lg">Loading...</div>
       </div>
-    )
+    );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <Navigate to="/login" replace />;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-lg">Loading...</div>
       </div>
-    )
+    );
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/dashboard" replace />;
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }
 
 function App() {
@@ -86,7 +86,7 @@ function App() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;
