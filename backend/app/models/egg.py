@@ -1,12 +1,9 @@
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from sqlalchemy import JSON
-from sqlmodel import Column, Field, Relationship, SQLModel
-
-if TYPE_CHECKING:
-    from app.models.user import User
+from sqlmodel import Column, Field, SQLModel
 
 
 class Visibility(str, Enum):
@@ -44,7 +41,7 @@ class EggConfig(EggConfigBase, table=True):
     __tablename__ = "egg_configs"
 
     id: int | None = Field(default=None, primary_key=True)
-    owner_id: int = Field(foreign_key="users.id")
+    owner_id: str = Field(index=True)  # Zitadel subject (unique user ID)
 
     # The actual Pterodactyl egg JSON structure
     json_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
@@ -52,9 +49,6 @@ class EggConfig(EggConfigBase, table=True):
     # Metadata
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-    # Relationships
-    owner: "User" = Relationship(back_populates="eggs")
 
 
 class EggConfigCreate(SQLModel):
@@ -69,7 +63,7 @@ class EggConfigRead(EggConfigBase):
     """Schema for reading egg config data (public)."""
 
     id: int
-    owner_id: int
+    owner_id: str
     created_at: datetime
     updated_at: datetime
 

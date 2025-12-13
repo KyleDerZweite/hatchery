@@ -11,7 +11,6 @@ from app.models import (
     EggConfigRead,
     EggConfigReadFull,
     EggConfigUpdate,
-    UserRole,
     Visibility,
 )
 from app.services import ModpackService, get_modpack_service
@@ -86,7 +85,7 @@ async def list_eggs(
     """
     query = select(EggConfig)
 
-    if current_user.role != UserRole.ADMIN:
+    if not current_user.is_admin:
         # Users see their own eggs or public eggs
         query = query.where(
             or_(EggConfig.owner_id == current_user.id, EggConfig.visibility == Visibility.PUBLIC)
@@ -119,7 +118,7 @@ async def get_egg(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN:
+    if not current_user.is_admin:
         if egg.owner_id != current_user.id and egg.visibility != Visibility.PUBLIC:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this egg"
@@ -148,7 +147,7 @@ async def update_egg(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN and egg.owner_id != current_user.id:
+    if not current_user.is_admin and egg.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this egg"
         )
@@ -193,7 +192,7 @@ async def delete_egg(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN and egg.owner_id != current_user.id:
+    if not current_user.is_admin and egg.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this egg"
         )
@@ -218,7 +217,7 @@ async def export_egg_json(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN:
+    if not current_user.is_admin:
         if egg.owner_id != current_user.id and egg.visibility != Visibility.PUBLIC:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to export this egg"
@@ -246,7 +245,7 @@ async def regenerate_egg(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN and egg.owner_id != current_user.id:
+    if not current_user.is_admin and egg.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to regenerate this egg"
         )

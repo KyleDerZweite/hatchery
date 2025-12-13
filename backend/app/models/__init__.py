@@ -14,15 +14,8 @@ from app.models.panel import (
     PanelInstanceReadWithKey,
     PanelInstanceUpdate,
 )
-from app.models.user import User, UserCreate, UserRead, UserRole, UserUpdate
 
 __all__ = [
-    # User
-    "User",
-    "UserCreate",
-    "UserRead",
-    "UserRole",
-    "UserUpdate",
     # Panel
     "PanelInstance",
     "PanelInstanceCreate",

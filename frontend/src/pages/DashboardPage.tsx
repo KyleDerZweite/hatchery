@@ -33,7 +33,7 @@ export function DashboardPage() {
       <div className="flex items-center justify-between px-2">
         <div>
           <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {user?.username}!</p>
+          <p className="text-muted-foreground">Welcome back, {user?.name || user?.email}!</p>
         </div>
         <div className="flex gap-3">
           <Button className="bg-primary/10 text-primary hover:bg-primary/20 border-none shadow-none">

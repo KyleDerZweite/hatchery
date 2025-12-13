@@ -28,18 +28,16 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite:///hatchery.db"
 
-    # Security
-    secret_key: str = "change-me-in-production-use-a-secure-random-key"
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 1440  # 24 hours
+    # Zitadel Auth
+    zitadel_domain: str = "auth.kylehub.dev"
 
-    # Registration settings
-    registration_enabled: bool = True  # Set to False for invite-only mode
+    @property
+    def zitadel_issuer(self) -> str:
+        return f"https://{self.zitadel_domain}"
 
-    # Default admin account (created on first startup if no users exist)
-    default_admin_username: str = "admin"
-    default_admin_email: str = "admin@hatchery.local"
-    default_admin_password: str = "changeme123"  # CHANGE THIS IN PRODUCTION!
+    @property
+    def zitadel_jwks_url(self) -> str:
+        return f"https://{self.zitadel_domain}/oauth/v2/keys"
 
     # External APIs
     curseforge_api_key: str = ""

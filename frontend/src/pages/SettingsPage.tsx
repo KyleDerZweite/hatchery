@@ -1,10 +1,12 @@
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/auth'
+import { ExternalLink } from 'lucide-react'
 
 export function SettingsPage() {
-  const { user } = useAuth()
+  const { user, openSettings, roles } = useAuth()
 
   return (
     <div className="space-y-8">
@@ -17,13 +19,13 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Profile</CardTitle>
           <CardDescription>
-            Your account information
+            Your account information (managed by Kylehub)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Username</Label>
-            <Input value={user?.username || ''} disabled className="bg-black/20 border-success/10" />
+            <Label>Name</Label>
+            <Input value={user?.name || ''} disabled className="bg-black/20 border-success/10" />
           </div>
           <div className="space-y-2">
             <Label>Email</Label>
@@ -31,15 +33,16 @@ export function SettingsPage() {
           </div>
           <div className="space-y-2">
             <Label>Role</Label>
-            <Input value={user?.role || ''} disabled className="capitalize bg-black/20 border-success/10" />
+            <Input value={roles.join(', ') || 'No roles assigned'} disabled className="capitalize bg-black/20 border-success/10" />
           </div>
-          <div className="space-y-2">
-            <Label>Member Since</Label>
-            <Input 
-              value={user?.created_at ? new Date(user.created_at).toLocaleDateString() : ''} 
-              disabled 
-              className="bg-black/20 border-success/10"
-            />
+          <div className="pt-4">
+            <Button onClick={openSettings} variant="outline" className="gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Manage Account in Kylehub
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2">
+              Change your password, profile picture, and other account settings
+            </p>
           </div>
         </CardContent>
       </Card>

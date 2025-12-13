@@ -1,10 +1,6 @@
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
 
-from sqlmodel import Field, Relationship, SQLModel
-
-if TYPE_CHECKING:
-    from app.models.user import User
+from sqlmodel import Field, SQLModel
 
 
 class PanelInstanceBase(SQLModel):
@@ -23,12 +19,9 @@ class PanelInstance(PanelInstanceBase, table=True):
 
     id: int | None = Field(default=None, primary_key=True)
     api_key: str  # Stored encrypted or plain text for MVP
-    owner_id: int = Field(foreign_key="users.id")
+    owner_id: str = Field(index=True)  # Zitadel subject (unique user ID)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-    # Relationships
-    owner: "User" = Relationship(back_populates="panels")
 
 
 class PanelInstanceCreate(SQLModel):
@@ -44,7 +37,7 @@ class PanelInstanceRead(PanelInstanceBase):
     """Schema for reading panel instance data (public)."""
 
     id: int
-    owner_id: int
+    owner_id: str
     created_at: datetime
     # Note: api_key is intentionally excluded for security
 

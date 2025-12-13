@@ -10,7 +10,6 @@ from app.models import (
     PanelInstanceRead,
     PanelInstanceReadWithKey,
     PanelInstanceUpdate,
-    UserRole,
 )
 
 router = APIRouter(prefix="/panels", tags=["Panel Instances"])
@@ -48,7 +47,7 @@ async def list_panels(
     List panel instances.
     Admins see all panels; users see only their own.
     """
-    if current_user.role == UserRole.ADMIN:
+    if current_user.is_admin:
         result = await session.execute(select(PanelInstance).offset(skip).limit(limit))
     else:
         result = await session.execute(
@@ -79,7 +78,7 @@ async def get_panel(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
+    if not current_user.is_admin and panel.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this panel"
         )
@@ -105,7 +104,7 @@ async def update_panel(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
+    if not current_user.is_admin and panel.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this panel"
         )
@@ -140,7 +139,7 @@ async def delete_panel(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
+    if not current_user.is_admin and panel.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this panel"
         )
@@ -168,7 +167,7 @@ async def test_panel_connection(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
 
     # Check permissions
-    if current_user.role != UserRole.ADMIN and panel.owner_id != current_user.id:
+    if not current_user.is_admin and panel.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to test this panel"
         )

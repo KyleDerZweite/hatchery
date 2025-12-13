@@ -7,8 +7,7 @@ All AI features are opt-in and require user configuration.
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from app.core.security import get_current_user
-from app.models import User
+from app.core.security import User, get_current_user
 from app.services.ai_service import (
     AIConfig,
     AIRequest,
@@ -84,15 +83,15 @@ class AITaskResult(BaseModel):
 
 
 # Store user-specific AI configs (in production, store in database)
-_user_ai_configs: dict[int, AIConfig] = {}
+_user_ai_configs: dict[str, AIConfig] = {}
 
 
-def get_user_ai_config(user_id: int) -> AIConfig | None:
+def get_user_ai_config(user_id: str) -> AIConfig | None:
     """Get AI config for a specific user."""
     return _user_ai_configs.get(user_id)
 
 
-def set_user_ai_config(user_id: int, config: AIConfig) -> None:
+def set_user_ai_config(user_id: str, config: AIConfig) -> None:
     """Set AI config for a specific user."""
     _user_ai_configs[user_id] = config
 

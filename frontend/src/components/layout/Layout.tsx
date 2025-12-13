@@ -2,14 +2,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import {
-  Egg,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Server,
-  Settings,
-  Sprout,
-  X,
+    Egg,
+    LayoutDashboard,
+    LogOut,
+    Menu,
+    Server,
+    Settings,
+    Sprout,
+    X,
 } from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
@@ -102,13 +102,13 @@ export function Layout() {
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 p-[1px] shadow-lg shadow-primary/20">
               <div className="h-full w-full rounded-[11px] bg-sidebar flex items-center justify-center">
                 <span className="text-sm font-bold text-primary">
-                  {user?.username?.[0]?.toUpperCase() || "U"}
+                  {(user?.name || user?.email)?.[0]?.toUpperCase() || "U"}
                 </span>
               </div>
             </div>
             <div className="flex flex-col overflow-hidden">
               <span className="text-sm font-semibold text-white truncate">
-                {user?.username}
+                {user?.name || user?.email}
               </span>
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
                 {user?.role || "User"}

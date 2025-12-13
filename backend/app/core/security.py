@@ -1,108 +1,197 @@
-from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Annotated
+"""
+JWT validation and auth dependencies for FastAPI.
 
-import bcrypt
+Features:
+- JWKS-based token validation (no network calls per request after caching)
+- User model with role extraction
+- Dependencies for protected endpoints
+- Role-based access control (ADMIN, MEMBER)
+"""
+
+import time
+from dataclasses import dataclass
+from typing import Annotated, Optional
+
+import httpx
+import jwt
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from pydantic import BaseModel
-from sqlmodel import select
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import settings
-from app.core.db import SessionDep
 
-if TYPE_CHECKING:
-    from app.models.user import User
+# Security scheme for Swagger UI
+bearer_scheme = HTTPBearer(auto_error=False)
 
-# OAuth2 scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-
-class Token(BaseModel):
-    """JWT token response model."""
-
-    access_token: str
-    token_type: str = "bearer"
+# JWKS cache
+_jwks_cache: dict = {}
+_jwks_cache_time: float = 0
+JWKS_CACHE_TTL = 3600  # 1 hour
 
 
-class TokenData(BaseModel):
-    """Data extracted from JWT token."""
+@dataclass
+class User:
+    """Authenticated user extracted from JWT."""
 
-    user_id: int | None = None
-    username: str | None = None
+    id: str  # Zitadel subject (unique, permanent ID)
+    email: str
+    name: str
+    roles: list[str]
+
+    def has_role(self, role: str) -> bool:
+        return role in self.roles
+
+    @property
+    def is_admin(self) -> bool:
+        return self.has_role("ADMIN")
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against a hashed password."""
-    return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+async def fetch_jwks() -> dict:
+    """Fetch JWKS from Zitadel (cached)."""
+    global _jwks_cache, _jwks_cache_time
+
+    now = time.time()
+    if _jwks_cache and (now - _jwks_cache_time) < JWKS_CACHE_TTL:
+        return _jwks_cache
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(settings.zitadel_jwks_url)
+        response.raise_for_status()
+        _jwks_cache = response.json()
+        _jwks_cache_time = now
+        return _jwks_cache
 
 
-def get_password_hash(password: str) -> str:
-    """Hash a password."""
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+def get_signing_key(token: str, jwks: dict) -> str:
+    """Get the signing key for the token from JWKS."""
+    unverified_header = jwt.get_unverified_header(token)
+    kid = unverified_header.get("kid")
+
+    for key in jwks.get("keys", []):
+        if key.get("kid") == kid:
+            return jwt.algorithms.RSAAlgorithm.from_jwk(key)
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Unable to find signing key",
+    )
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
-    """Create a JWT access token."""
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.now(UTC) + expires_delta
-    else:
-        expire = datetime.now(UTC) + timedelta(minutes=settings.access_token_expire_minutes)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.secret_key, algorithm=settings.algorithm)
-    return encoded_jwt
+def extract_roles(claims: dict) -> list[str]:
+    """Extract role keys from Zitadel token claims."""
+    roles_obj = claims.get("urn:zitadel:iam:org:project:roles", {})
+    if isinstance(roles_obj, dict):
+        return list(roles_obj.keys())
+    return []
 
 
 async def get_current_user(
-    session: SessionDep,
-    token: Annotated[str, Depends(oauth2_scheme)],
-):
-    """Get the current authenticated user from JWT token."""
-    # Import here to avoid circular imports
-    from app.models.user import User
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+) -> User:
+    """
+    Dependency to get the current authenticated user.
 
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    Usage:
+        @router.get("/protected")
+        async def protected(user: User = Depends(get_current_user)):
+            return {"user": user.email}
+    """
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials
 
     try:
-        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
-        user_id_raw = payload.get("sub")
-        if user_id_raw is None:
-            raise credentials_exception
-        try:
-            user_id = int(user_id_raw)
-        except (ValueError, TypeError):
-            raise credentials_exception
-        token_data = TokenData(user_id=user_id)
-    except JWTError:
-        raise credentials_exception
+        # Fetch JWKS and get signing key
+        jwks = await fetch_jwks()
+        signing_key = get_signing_key(token, jwks)
 
-    result = await session.execute(select(User).where(User.id == token_data.user_id))
-    user = result.scalar_one_or_none()
+        # Decode and verify token
+        claims = jwt.decode(
+            token,
+            signing_key,
+            algorithms=["RS256"],
+            issuer=settings.zitadel_issuer,
+            options={"verify_aud": False},  # Zitadel uses project-based audience
+        )
 
-    if user is None:
-        raise credentials_exception
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
+        return User(
+            id=claims.get("sub", ""),
+            email=claims.get("email", ""),
+            name=claims.get("name", claims.get("preferred_username", "")),
+            roles=extract_roles(claims),
+        )
 
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+        )
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}",
+        )
+
+
+async def get_current_active_admin(user: User = Depends(get_current_user)) -> User:
+    """
+    Dependency that requires the user to have ADMIN role.
+
+    Usage:
+        @router.delete("/resource/{id}")
+        async def delete_resource(id: str, user: User = Depends(get_current_active_admin)):
+            ...
+    """
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
     return user
 
 
-async def get_current_active_admin(
-    current_user: Annotated["User", Depends(get_current_user)],
-):
-    """Get the current user and verify they are an admin."""
-    from app.models.user import UserRole
+async def require_member(user: User = Depends(get_current_user)) -> User:
+    """
+    Dependency that requires the user to have at least MEMBER role.
 
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return current_user
+    Usage:
+        @router.post("/resource")
+        async def create_resource(user: User = Depends(require_member)):
+            ...
+    """
+    if not user.has_role("MEMBER") and not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Member access required",
+        )
+    return user
+
+
+def require_role(role: str):
+    """
+    Factory for creating role-specific dependencies.
+
+    Usage:
+        @router.get("/managers-only")
+        async def managers_only(user: User = Depends(require_role("MANAGER"))):
+            ...
+    """
+
+    async def dependency(user: User = Depends(get_current_user)) -> User:
+        if not user.has_role(role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{role} role required",
+            )
+        return user
+
+    return dependency
 
 
 # Type aliases for dependency injection
-CurrentUser = Annotated["User", Depends(get_current_user)]
-CurrentAdmin = Annotated["User", Depends(get_current_active_admin)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
+CurrentAdmin = Annotated[User, Depends(get_current_active_admin)]

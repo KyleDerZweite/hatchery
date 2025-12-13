@@ -1,27 +1,30 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
-import { useAuth } from "./lib/auth";
+import { AuthCallback, useAuth } from "./lib/auth";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EggDetailPage } from "./pages/EggDetailPage";
 import { EggsPage } from "./pages/EggsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PanelsPage } from "./pages/PanelsPage";
-import { RegisterPage } from "./pages/RegisterPage";
 import { SettingsPage } from "./pages/SettingsPage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    // Store the intended destination for redirect after login
+    sessionStorage.setItem("auth_redirect", location.pathname);
+    login();
+    return null;
   }
 
   return <>{children}</>;
@@ -33,7 +36,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
   }
@@ -48,20 +51,15 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <Routes>
+      {/* OIDC Callback */}
+      <Route path="/callback" element={<AuthCallback />} />
+
       {/* Public routes */}
       <Route
         path="/login"
         element={
           <PublicRoute>
             <LoginPage />
-          </PublicRoute>
-        }
-      />
-      <Route
-        path="/register"
-        element={
-          <PublicRoute>
-            <RegisterPage />
           </PublicRoute>
         }
       />

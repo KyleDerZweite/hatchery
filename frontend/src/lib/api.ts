@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || ''
 
@@ -9,12 +9,26 @@ export const api = axios.create({
   },
 })
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token from OIDC storage
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    // Get token from OIDC storage
+    // react-oidc-context stores user in sessionStorage with key pattern:
+    // oidc.user:<authority>:<client_id>
+    const authority = import.meta.env.VITE_ZITADEL_AUTHORITY;
+    const clientId = import.meta.env.VITE_ZITADEL_CLIENT_ID;
+    const storageKey = `oidc.user:${authority}:${clientId}`;
+
+    const userJson = sessionStorage.getItem(storageKey);
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        if (user.access_token) {
+          config.headers.Authorization = `Bearer ${user.access_token}`;
+        }
+      } catch {
+        // Invalid JSON, ignore
+      }
     }
     return config
   },
@@ -25,12 +39,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    // Don't redirect for login failures, let the component handle it
-    const isLoginRequest = error.config?.url?.endsWith('auth/login');
-    
-    if (error.response?.status === 401 && !isLoginRequest) {
-      localStorage.removeItem('token')
-      window.location.href = '/login'
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear OIDC storage
+      const authority = import.meta.env.VITE_ZITADEL_AUTHORITY;
+      const clientId = import.meta.env.VITE_ZITADEL_CLIENT_ID;
+      const storageKey = `oidc.user:${authority}:${clientId}`;
+      sessionStorage.removeItem(storageKey);
+      
+      // Redirect to login
+      window.location.href = '/login';
     }
     return Promise.reject(error)
   }
@@ -38,28 +55,12 @@ api.interceptors.response.use(
 
 // Types
 export interface User {
-  id: number
-  username: string
-  email: string
-  is_active: boolean
+  id: string
+  sub: string
+  username?: string
+  email?: string
+  name?: string
   role: 'admin' | 'user'
-  created_at: string
-}
-
-export interface LoginCredentials {
-  username: string
-  password: string
-}
-
-export interface RegisterData {
-  username: string
-  email: string
-  password: string
-}
-
-export interface Token {
-  access_token: string
-  token_type: string
 }
 
 export interface PanelInstance {
@@ -101,30 +102,6 @@ export interface EggCreateData {
   source_url: string
   visibility?: 'public' | 'private'
   java_version?: number
-}
-
-// Auth API
-export const authApi = {
-  login: async (credentials: LoginCredentials): Promise<Token> => {
-    const formData = new URLSearchParams()
-    formData.append('username', credentials.username)
-    formData.append('password', credentials.password)
-    
-    const response = await api.post('/auth/login', formData, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    })
-    return response.data
-  },
-  
-  register: async (data: RegisterData): Promise<User> => {
-    const response = await api.post('/auth/register', data)
-    return response.data
-  },
-  
-  getCurrentUser: async (): Promise<User> => {
-    const response = await api.get('/users/me')
-    return response.data
-  },
 }
 
 // Panels API
