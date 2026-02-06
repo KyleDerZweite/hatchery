@@ -1,6 +1,41 @@
+[project]
+name = "hatchery-backend"
+version = "0.2.0"
+description = "Hatchery - Modpack-to-Server Automation Platform with AI-powered Creation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sqlmodel>=0.0.22",
+    "sqlalchemy>=2.0.25",
+    "aiosqlite>=0.20.0",
+    "asyncpg>=0.30.0",
+    "PyJWT>=2.10.0",
+    "python-multipart>=0.0.9",
+    "httpx>=0.28.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.6.0",
+    "python-dotenv>=1.0.0",
+    "email-validator>=2.2.0",
+    "openai>=1.55.0",
+    "arq>=0.26.0",
+    "redis>=5.2.0",
+    "structlog>=24.4.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "respx>=0.21.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
 [tool.ruff]
-# Python version target
-target-version = "py311"
+target-version = "py312"
 
 # Line length
 line-length = 100
@@ -58,7 +93,7 @@ indent-style = "space"
 line-ending = "lf"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 strict = false
 warn_return_any = true
 warn_unused_ignores = true

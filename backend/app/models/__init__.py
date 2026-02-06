@@ -7,6 +7,12 @@ from app.models.egg import (
     ModpackSource,
     Visibility,
 )
+from app.models.mod import (
+    ModReference,
+    ModReferenceRead,
+    ModVersion,
+    ModVersionRead,
+)
 from app.models.panel import (
     PanelInstance,
     PanelInstanceCreate,
@@ -14,20 +20,46 @@ from app.models.panel import (
     PanelInstanceReadWithKey,
     PanelInstanceUpdate,
 )
+from app.models.project import (
+    ModInProject,
+    Project,
+    ProjectCreate,
+    ProjectListRead,
+    ProjectMods,
+    ProjectModsRead,
+    ProjectQuests,
+    ProjectQuestsRead,
+    ProjectRead,
+    ProjectStatus,
+    ProjectVisibility,
+)
 
 __all__ = [
-    # Panel
-    "PanelInstance",
-    "PanelInstanceCreate",
-    "PanelInstanceRead",
-    "PanelInstanceReadWithKey",
-    "PanelInstanceUpdate",
-    # Egg
     "EggConfig",
     "EggConfigCreate",
     "EggConfigRead",
     "EggConfigReadFull",
     "EggConfigUpdate",
     "ModpackSource",
+    "ModReference",
+    "ModReferenceRead",
+    "ModVersion",
+    "ModVersionRead",
+    "PanelInstance",
+    "PanelInstanceCreate",
+    "PanelInstanceRead",
+    "PanelInstanceReadWithKey",
+    "PanelInstanceUpdate",
+    "Project",
+    "ProjectCreate",
+    "ProjectListRead",
+    "ProjectMods",
+    "ProjectModsRead",
+    "ProjectQuests",
+    "ProjectQuestsRead",
+    "ProjectRead",
+    "ProjectStatus",
+    "ModInProject",
+    "ProjectVisibility",
     "Visibility",
 ]
