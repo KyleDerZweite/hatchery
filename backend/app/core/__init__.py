@@ -1,11 +1,16 @@
 from app.core.config import settings
-from app.core.db import SessionDep, get_session, init_db
+from app.core.db import (
+    SessionDep,
+    async_session_factory,
+    get_session,
+    init_db,
+)
 from app.core.security import (
     CurrentAdmin,
     CurrentUser,
     User,
-    get_current_user,
     get_current_active_admin,
+    get_current_user,
     require_member,
     require_role,
 )
@@ -13,6 +18,7 @@ from app.core.security import (
 __all__ = [
     "settings",
     "SessionDep",
+    "async_session_factory",
     "get_session",
     "init_db",
     "CurrentUser",

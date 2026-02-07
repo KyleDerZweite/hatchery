@@ -1,16 +1,32 @@
 """
-AI Service - Flexible AI integration for optional enhancement and error recovery.
+AI Service - Unified AI integration for modpack operations.
 
-This service is completely opt-in and supports any OpenAI-compatible API endpoint.
-Minimal data is sent to the AI - only what's necessary for the specific task.
+This service provides:
+1. Low-level task helpers (clean_name, enhance_description, etc.)
+2. High-level modpack generation (select_mods, generate_quest_outline)
+
+Security considerations:
+- Minimal data sent to AI (only what's necessary)
+- Input validation and size limits
+- No secrets in prompts
+- Structured logging for audit
 """
 
+from __future__ import annotations
+
 import json
+import re
 from enum import Enum
 from typing import Any
 
-import httpx
+import structlog
+from openai import AsyncOpenAI
 from pydantic import BaseModel
+
+from app.core.config import settings
+from app.core.constants import DEFAULT_MOD_SLUGS
+
+logger = structlog.get_logger()
 
 
 class AITask(str, Enum):
@@ -21,16 +37,8 @@ class AITask(str, Enum):
     DETECT_MODLOADER = "detect_modloader"
     SUGGEST_JAVA_VERSION = "suggest_java_version"
     FIX_PARSE_ERROR = "fix_parse_error"
-
-
-class AIRequest(BaseModel):
-    """Request to the AI service - minimal data only."""
-
-    task: AITask
-    # Only the specific data needed for the task
-    input_text: str
-    # Optional context hints (e.g., "minecraft_version": "1.20.1")
-    context: dict[str, str] = {}
+    SELECT_MODS = "select_mods"
+    GENERATE_QUESTS = "generate_quests"
 
 
 class AIResponse(BaseModel):
@@ -42,19 +50,40 @@ class AIResponse(BaseModel):
     tokens_used: int | None = None
 
 
-class AIConfig(BaseModel):
-    """User-provided AI configuration."""
+_SYSTEM_PROMPT_MOD_SELECTOR = """You are a Minecraft modpack curator.
 
-    enabled: bool = False
-    api_endpoint: str = ""  # e.g., "https://openrouter.ai/api/v1", "http://localhost:11434/v1"
-    api_key: str = ""  # Optional for local models
-    model: str = ""  # e.g., "google/gemini-flash-1.5", "qwen/qwen-2.5-7b-instruct"
-    max_tokens: int = 150  # Keep responses short
-    temperature: float = 0.3  # Low temperature for consistent outputs
+Your job is to select mods that:
+1. Work well together thematically
+2. Provide good gameplay progression
+3. Are compatible with each other (avoid known conflicts)
+4. Match the user's vision for the pack
+
+When selecting mods, consider:
+- Core mods that define the pack's identity
+- Support mods that enhance gameplay
+- Quality-of-life mods
+- Performance and optimization mods
+
+Output valid JSON with your selections and reasoning."""
+
+_SYSTEM_PROMPT_QUEST = """You are a Minecraft modpack quest designer.
+
+You create engaging questlines that:
+1. Guide players through mod progression
+2. Tell a cohesive story
+3. Use actual items from the specified mods
+4. Balance difficulty appropriately
+
+When generating quests, ONLY use item IDs from the provided mod list.
+Item IDs follow the format: "modid:item_name" (e.g., "create:andesite_alloy").
+
+Output valid JSON matching the requested schema exactly."""
+
+_SYSTEM_PROMPT_GENERAL = """You are a helpful assistant for Minecraft server configuration. 
+Give minimal, direct responses. Never include sensitive information."""
 
 
-# Task-specific prompts - minimal and focused
-TASK_PROMPTS = {
+_TASK_PROMPTS: dict[AITask, str] = {
     AITask.CLEAN_NAME: """Clean this modpack name. Remove version numbers, underscores, dashes, and formatting artifacts. Return ONLY the cleaned name, nothing else.
 
 Input: {input_text}""",
@@ -76,214 +105,397 @@ Config snippet: {input_text}""",
 
 class AIService:
     """
-    Flexible AI service supporting any OpenAI-compatible API.
+    Unified AI service using OpenRouter (OpenAI-compatible API).
 
-    Supports:
-    - OpenRouter (https://openrouter.ai/api/v1)
-    - OpenAI (https://api.openai.com/v1)
-    - Anthropic via OpenRouter
-    - Ollama (http://localhost:11434/v1)
-    - Any OpenAI-compatible endpoint
+    Provides both low-level convenience methods and high-level
+    modpack generation functions.
     """
 
-    def __init__(self, config: AIConfig | None = None):
-        self.config = config
-        self._client: httpx.AsyncClient | None = None
+    def __init__(self) -> None:
+        self._client: AsyncOpenAI | None = None
 
-    def configure(self, config: AIConfig) -> None:
-        """Update AI configuration."""
-        self.config = config
-        self._client = None  # Reset client on config change
-
-    @property
-    def is_enabled(self) -> bool:
-        """Check if AI service is properly configured and enabled."""
-        if not self.config or not self.config.enabled:
-            return False
-        if not self.config.api_endpoint or not self.config.model:
-            return False
-        return True
-
-    async def _get_client(self) -> httpx.AsyncClient:
-        """Get or create HTTP client."""
+    def _get_client(self) -> AsyncOpenAI:
+        """Get or create OpenAI client configured for OpenRouter."""
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=30.0)
+            self._client = AsyncOpenAI(
+                api_key=settings.openrouter_api_key,
+                base_url=settings.openrouter_base_url,
+                default_headers={
+                    "HTTP-Referer": "https://github.com/hatchery",
+                    "X-Title": "Hatchery",
+                },
+            )
         return self._client
 
     async def close(self) -> None:
-        """Close the HTTP client."""
+        """Close the OpenAI client."""
         if self._client:
-            await self._client.aclose()
+            await self._client.close()
             self._client = None
 
-    def _build_prompt(self, request: AIRequest) -> str:
-        """Build minimal prompt for the specific task."""
-        template = TASK_PROMPTS.get(request.task, "{input_text}")
+    @property
+    def is_enabled(self) -> bool:
+        """Check if AI service is properly configured."""
+        return settings.ai_enabled
 
-        # Format context as simple key-value if present
-        context_str = ""
-        if request.context:
-            context_str = "\n".join(f"{k}: {v}" for k, v in request.context.items())
-
-        return template.format(
-            input_text=request.input_text[:500],  # Limit input size
-            context=context_str,
-        )
-
-    async def process(self, request: AIRequest) -> AIResponse:
+    async def _chat(
+        self,
+        prompt: str,
+        system_prompt: str = _SYSTEM_PROMPT_GENERAL,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> str | None:
         """
-        Process an AI request with minimal data.
+        Send a chat completion and return the assistant's text.
 
-        Returns AIResponse with success=False if AI is disabled or fails.
+        Returns None on error or if AI is disabled.
         """
         if not self.is_enabled:
-            return AIResponse(success=False, error="AI service not configured or disabled")
+            return None
 
         try:
-            client = await self._get_client()
-            prompt = self._build_prompt(request)
-
-            # Build request for OpenAI-compatible API
-            headers = {"Content-Type": "application/json"}
-            if self.config.api_key:
-                headers["Authorization"] = f"Bearer {self.config.api_key}"
-
-            # OpenRouter-specific headers (ignored by other providers)
-            headers["HTTP-Referer"] = "https://github.com/hatchery"
-            headers["X-Title"] = "Hatchery"
-
-            payload = {
-                "model": self.config.model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": "You are a helpful assistant for Minecraft server configuration. Give minimal, direct responses.",
-                    },
+            client = self._get_client()
+            response = await client.chat.completions.create(
+                model=settings.openrouter_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt},
                 ],
-                "max_tokens": self.config.max_tokens,
-                "temperature": self.config.temperature,
-            }
-
-            # Ensure endpoint ends properly
-            endpoint = self.config.api_endpoint.rstrip("/")
-            if not endpoint.endswith("/chat/completions"):
-                endpoint = f"{endpoint}/chat/completions"
-
-            response = await client.post(
-                endpoint,
-                headers=headers,
-                json=payload,
+                temperature=temperature or settings.ai_temperature,
+                max_tokens=max_tokens or settings.ai_max_tokens,
             )
 
-            if response.status_code != 200:
-                return AIResponse(
-                    success=False,
-                    error=f"API error: {response.status_code} - {response.text[:200]}",
+            content = response.choices[0].message.content
+            if content:
+                logger.debug(
+                    "ai_chat_completed",
+                    model=settings.openrouter_model,
+                    tokens_used=response.usage.total_tokens if response.usage else None,
                 )
+            return content
 
-            data = response.json()
-
-            # Extract response text
-            result = None
-            tokens_used = None
-
-            if "choices" in data and data["choices"]:
-                message = data["choices"][0].get("message", {})
-                result = message.get("content", "").strip()
-
-            if "usage" in data:
-                tokens_used = data["usage"].get("total_tokens")
-
-            if not result:
-                return AIResponse(success=False, error="Empty response from AI")
-
-            return AIResponse(success=True, result=result, tokens_used=tokens_used)
-
-        except httpx.TimeoutException:
-            return AIResponse(success=False, error="AI request timed out")
         except Exception as e:
-            return AIResponse(success=False, error=f"AI error: {str(e)}")
+            logger.error("ai_chat_error", error=str(e))
+            return None
 
-    # Convenience methods for specific tasks
+    async def _chat_json(
+        self,
+        prompt: str,
+        system_prompt: str = _SYSTEM_PROMPT_GENERAL,
+        temperature: float = 0.3,
+    ) -> dict[str, Any]:
+        """
+        Send a chat request expecting JSON-only output.
+
+        Returns empty dict on failure.
+        """
+        json_system = system_prompt + (
+            "\n\nYou must respond with valid JSON only. "
+            "Do not include markdown code blocks or any other text. "
+            "Only output the raw JSON object."
+        )
+
+        result = await self._chat(
+            prompt=prompt,
+            system_prompt=json_system,
+            temperature=temperature,
+        )
+
+        if not result:
+            return {}
+
+        return self._parse_json_response(result)
+
+    def _parse_json_response(self, text: str) -> dict[str, Any]:
+        """Parse JSON from AI response, handling markdown fences."""
+        text = text.strip()
+
+        if text.startswith("```"):
+            lines = text.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            text = "\n".join(lines)
+
+        brace = text.find("{")
+        bracket = text.find("[")
+
+        if brace == -1 and bracket == -1:
+            return {}
+
+        if brace == -1:
+            start_c, end_c, start_i = "[", "]", bracket
+        elif bracket == -1 or brace < bracket:
+            start_c, end_c, start_i = "{", "}", brace
+        else:
+            start_c, end_c, start_i = "[", "]", bracket
+
+        depth = 0
+        end_i = start_i
+        in_str = False
+        esc = False
+
+        for i, ch in enumerate(text[start_i:], start_i):
+            if esc:
+                esc = False
+                continue
+            if ch == "\\":
+                esc = True
+                continue
+            if ch == '"' and not esc:
+                in_str = not in_str
+                continue
+            if in_str:
+                continue
+            if ch == start_c:
+                depth += 1
+            elif ch == end_c:
+                depth -= 1
+                if depth == 0:
+                    end_i = i
+                    break
+
+        text = text[start_i : end_i + 1]
+        text = re.sub(r",(\s*[}\]])", r"\1", text)
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return {}
+
+    async def select_mods(
+        self,
+        candidate_descriptions: list[str],
+        user_prompt: str,
+        mc_version: str,
+        loader: str,
+        template_names: list[str] | None = None,
+        target_count: int = 50,
+    ) -> dict[str, Any]:
+        """
+        Ask the AI to pick the best mods from a candidate list.
+
+        Returns dict with "selected_slugs" and "reasoning".
+        """
+        if not self.is_enabled:
+            return {
+                "selected_slugs": list(DEFAULT_MOD_SLUGS),
+                "reasoning": "AI disabled - using default mods only",
+            }
+
+        templates = template_names or ["tech"]
+        template_label = ", ".join(templates[:3])
+        candidate_block = "\n".join(candidate_descriptions[:100])
+
+        prompt = f"""Select mods for a Minecraft modpack.
+
+USER REQUEST: {user_prompt[:500]}
+MINECRAFT VERSION: {mc_version}
+MOD LOADER: {loader}
+TARGET MOD COUNT: {target_count}
+TEMPLATE STYLES: {template_label}
+
+The pack should blend the following template styles: {template_label}.
+Prioritise mods that complement multiple chosen styles where possible.
+
+AVAILABLE MODS (search results):
+{candidate_block}
+
+Select the best {target_count} mods for this pack. Consider:
+1. Must match the user's theme and vision
+2. Include essential core mods
+3. Add quality-of-life improvements
+4. Avoid redundant mods
+
+Output JSON:
+{{
+    "selected_slugs": ["mod_slug_1", "mod_slug_2"],
+    "reasoning": "Brief explanation of your selections"
+}}"""
+
+        raw = await self._chat_json(
+            prompt=prompt,
+            system_prompt=_SYSTEM_PROMPT_MOD_SELECTOR,
+        )
+
+        if not raw:
+            return {
+                "selected_slugs": list(DEFAULT_MOD_SLUGS),
+                "reasoning": "AI response parsing failed",
+            }
+
+        selected = raw.get("selected_slugs", [])
+
+        for slug in DEFAULT_MOD_SLUGS:
+            if slug not in selected:
+                selected.append(slug)
+
+        logger.info(
+            "ai_mods_selected",
+            count=len(selected),
+            mc_version=mc_version,
+            loader=loader,
+        )
+
+        return {
+            "selected_slugs": selected[: target_count + len(DEFAULT_MOD_SLUGS)],
+            "reasoning": str(raw.get("reasoning", ""))[:1000],
+        }
+
+    async def generate_quest_outline(
+        self,
+        mod_descriptions: list[str],
+        user_prompt: str,
+        template_names: list[str] | None = None,
+        chapter_count: int = 3,
+        quests_per_chapter: int = 5,
+    ) -> dict[str, Any]:
+        """
+        Ask the AI to generate a quest storyline.
+
+        Returns parsed JSON dict matching the StoryOutline schema.
+        """
+        if not self.is_enabled:
+            return {
+                "title": "Default Questline",
+                "description": "Complete quests to progress",
+                "chapters": [],
+            }
+
+        templates = template_names or ["tech"]
+        template_label = ", ".join(templates[:3])
+        mod_block = "\n".join(mod_descriptions[:50])
+
+        prompt = f"""Create a quest storyline for a Minecraft modpack.
+
+THEME: {user_prompt[:500]}
+TEMPLATE STYLES: {template_label}
+
+The quest line should weave together the following template styles: {template_label}.
+
+AVAILABLE MODS AND ITEMS:
+{mod_block}
+
+Generate exactly {chapter_count} chapters with {quests_per_chapter} quests each.
+
+Output JSON in this exact format:
+{{
+    "title": "Pack Story Title",
+    "description": "Brief description of the story",
+    "chapters": [
+        {{
+            "title": "Chapter 1: Getting Started",
+            "filename": "getting_started",
+            "icon": "minecraft:crafting_table",
+            "quests": [
+                {{
+                    "title": "Quest Title",
+                    "description": "What to do and why",
+                    "icon": "modid:item_name",
+                    "tasks": [
+                        {{"type": "item", "item": "modid:item_name", "count": 1}}
+                    ],
+                    "rewards": [
+                        {{"type": "item", "item": "modid:reward_item", "count": 1}}
+                    ]
+                }}
+            ]
+        }}
+    ]
+}}
+
+IMPORTANT:
+- Only use item IDs from the mods listed above
+- First quest of each chapter should have no dependencies
+- Later quests should reference earlier ones
+- Create a logical progression through mod tiers"""
+
+        raw = await self._chat_json(
+            prompt=prompt,
+            system_prompt=_SYSTEM_PROMPT_QUEST,
+            temperature=0.7,
+        )
+
+        if not raw:
+            return {
+                "title": "Default Questline",
+                "description": "Complete quests to progress",
+                "chapters": [],
+            }
+
+        logger.info(
+            "ai_quests_generated",
+            chapters=len(raw.get("chapters", [])),
+            total_quests=sum(len(c.get("quests", [])) for c in raw.get("chapters", [])),
+        )
+
+        return raw
 
     async def clean_name(self, raw_name: str) -> str | None:
         """Clean a modpack name. Returns None if AI unavailable."""
-        response = await self.process(AIRequest(task=AITask.CLEAN_NAME, input_text=raw_name))
-        return response.result if response.success else None
+        prompt = _TASK_PROMPTS[AITask.CLEAN_NAME].format(input_text=raw_name[:500])
+        return await self._chat(prompt)
 
     async def enhance_description(
-        self, name: str, existing_desc: str | None = None, modloader: str | None = None
+        self,
+        name: str,
+        existing_desc: str | None = None,
+        modloader: str | None = None,
     ) -> str | None:
         """Generate or enhance a description. Returns None if AI unavailable."""
-        context = {}
+        context_parts = []
         if existing_desc:
-            context["existing"] = existing_desc[:200]
+            context_parts.append(f"existing: {existing_desc[:200]}")
         if modloader:
-            context["modloader"] = modloader
+            context_parts.append(f"modloader: {modloader}")
 
-        response = await self.process(
-            AIRequest(task=AITask.ENHANCE_DESCRIPTION, input_text=name, context=context)
+        context = "\n".join(context_parts)
+        prompt = _TASK_PROMPTS[AITask.ENHANCE_DESCRIPTION].format(
+            input_text=name[:200],
+            context=context,
         )
-        return response.result if response.success else None
+        return await self._chat(prompt)
 
     async def detect_modloader(self, hints: str) -> str | None:
         """Detect modloader from hints. Returns None if AI unavailable."""
-        response = await self.process(AIRequest(task=AITask.DETECT_MODLOADER, input_text=hints))
-        if response.success and response.result:
-            result = response.result.lower().strip()
+        prompt = _TASK_PROMPTS[AITask.DETECT_MODLOADER].format(input_text=hints[:500])
+        result = await self._chat(prompt)
+        if result:
+            result = result.lower().strip()
             if result in ("forge", "fabric", "neoforge", "quilt"):
                 return result
         return None
 
     async def suggest_java_version(
-        self, minecraft_version: str, additional_info: str = ""
+        self,
+        minecraft_version: str,
+        additional_info: str = "",
     ) -> int | None:
         """Suggest Java version. Returns None if AI unavailable."""
-        response = await self.process(
-            AIRequest(
-                task=AITask.SUGGEST_JAVA_VERSION,
-                input_text=additional_info or "No additional info",
-                context={"minecraft_version": minecraft_version},
-            )
+        prompt = _TASK_PROMPTS[AITask.SUGGEST_JAVA_VERSION].format(
+            input_text=additional_info[:200] or "No additional info",
+            context=minecraft_version,
         )
-        if response.success and response.result:
+        result = await self._chat(prompt)
+        if result:
             try:
-                return int(response.result.strip())
+                return int(result.strip())
             except ValueError:
                 pass
         return None
 
     async def fix_parse_error(self, config_snippet: str) -> dict[str, Any] | None:
-        """
-        Attempt to extract info from malformed config.
-        Returns parsed dict or None if AI unavailable/fails.
-        """
-        response = await self.process(
-            AIRequest(
-                task=AITask.FIX_PARSE_ERROR,
-                input_text=config_snippet[:1000],  # Limit size
-            )
-        )
-        if response.success and response.result:
-            try:
-                # Try to parse JSON from response
-                result = response.result
-                # Handle markdown code blocks if present
-                if "```" in result:
-                    result = result.split("```")[1]
-                    if result.startswith("json"):
-                        result = result[4:]
-                return json.loads(result.strip())
-            except (json.JSONDecodeError, IndexError):
-                pass
+        """Attempt to extract info from malformed config."""
+        prompt = _TASK_PROMPTS[AITask.FIX_PARSE_ERROR].format(input_text=config_snippet[:1000])
+        result = await self._chat(prompt)
+        if result:
+            return self._parse_json_response(result)
         return None
 
 
-# Singleton instance (configured per-request or globally)
 ai_service = AIService()
 
 
 def get_ai_service() -> AIService:
-    """Get the AI service instance."""
     return ai_service

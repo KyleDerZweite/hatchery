@@ -10,7 +10,7 @@ Features:
 
 import time
 from dataclasses import dataclass
-from typing import Annotated, Optional
+from typing import Annotated
 
 import httpx
 import jwt
@@ -85,7 +85,7 @@ def extract_roles(claims: dict) -> list[str]:
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> User:
     """
     Dependency to get the current authenticated user.

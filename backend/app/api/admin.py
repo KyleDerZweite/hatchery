@@ -44,5 +44,5 @@ async def get_zitadel_console_url(_: CurrentAdmin = None):
     """
     return {
         "url": f"https://{settings.zitadel_domain}/ui/console",
-        "description": "Manage users, roles, and authentication settings in Zitadel"
+        "description": "Manage users, roles, and authentication settings in Zitadel",
     }

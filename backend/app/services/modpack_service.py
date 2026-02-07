@@ -414,7 +414,7 @@ class ModpackService:
         # For now, we'll assume the caller passes it or we default to FORGE if unknown,
         # but really we should try to preserve the existing startup structure if possible.
         # However, _get_startup_command is robust enough.
-        
+
         # Safer approach: Use the modloader stored in EggConfig if passed, otherwise try to guess
         modloader_enum = ModpackType.FORGE
         if modloader:
@@ -424,11 +424,11 @@ class ModpackService:
                 pass
 
         egg_json["startup"] = self._get_startup_command(modloader_enum, java_version)
-        
+
         # Update installation container
         if "scripts" in egg_json and "installation" in egg_json["scripts"]:
             egg_json["scripts"]["installation"]["container"] = f"eclipse-temurin:{java_version}-jdk"
-            
+
         return egg_json
 
     def _get_docker_images(self, java_version: int) -> dict[str, str]:
