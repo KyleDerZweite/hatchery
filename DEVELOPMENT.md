@@ -10,7 +10,6 @@ Hatchery is a Modpack-to-Server automation platform that converts CurseForge and
 hatchery/
 ├── backend/          # FastAPI Python backend
 ├── frontend/         # React TypeScript frontend
-├── docker/           # Docker configurations
 ├── docs/             # Documentation
 └── legacy/           # Reference implementations (read-only)
 ```
@@ -20,27 +19,24 @@ hatchery/
 ### Prerequisites
 
 - Python 3.11+
-- Node.js 18+
-- Docker & Docker Compose (optional, for containerized development)
+- Node.js 20+
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
+- [pnpm](https://pnpm.io/) (Node.js package manager)
+- Podman & Podman Compose (optional, for containerized development)
 
 ### Backend Setup
 
 ```bash
 cd backend
 
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# or: .venv\Scripts\activate  # Windows
-
 # Install dependencies
-pip install -r requirements.txt
+uv sync
 
 # Copy environment file
 cp .env.example .env
 
 # Run development server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Setup
@@ -49,23 +45,23 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 cd frontend
 
 # Install dependencies
-npm install
+pnpm install
 
 # Run development server
-npm run dev
+pnpm dev
 ```
 
-### Docker Development
+### Container Development
 
 ```bash
 # Start all services
-docker-compose up -d
+podman-compose up -d
 
 # View logs
-docker-compose logs -f
+podman-compose logs -f
 
 # Stop services
-docker-compose down
+podman-compose down
 ```
 
 ## Key Services & Components
@@ -264,35 +260,37 @@ No full modpack data, user information, or server configurations are ever sent.
 ### Backend
 ```bash
 # Run tests
-pytest
+uv run pytest
 
 # Run with auto-reload
-uvicorn app.main:app --reload
+uv run uvicorn app.main:app --reload
 
 # Format code
-black app/
-isort app/
+uv run ruff format .
+
+# Lint code
+uv run ruff check .
 
 # Type checking
-mypy app/
+uv run mypy app
 ```
 
 ### Frontend
 ```bash
 # Development server
-npm run dev
+pnpm dev
 
 # Build for production
-npm run build
+pnpm build
 
 # Preview production build
-npm run preview
+pnpm preview
 
 # Lint
-npm run lint
+pnpm lint
 
 # Type checking
-npm run type-check
+pnpm typecheck
 ```
 
 ## Project Conventions
@@ -318,8 +316,8 @@ npm run type-check
 
 **Backend won't start**
 - Check Python version: `python --version` (need 3.11+)
-- Ensure venv is activated
-- Verify all dependencies installed
+- Ensure uv is installed
+- Verify all dependencies installed: `uv sync`
 
 **CurseForge modpacks not working**
 - Add `CURSEFORGE_API_KEY` to `.env`
@@ -333,7 +331,7 @@ npm run type-check
 
 Backend with verbose logging:
 ```bash
-LOG_LEVEL=DEBUG uvicorn app.main:app --reload
+LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload
 ```
 
 ## Legacy Code Reference

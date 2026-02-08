@@ -3,17 +3,22 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@9 --activate
+
 # Accept build arg for API URL
 ARG VITE_API_URL=http://localhost:8000
 ENV VITE_API_URL=$VITE_API_URL
 
+# Copy dependency files
+COPY pnpm-lock.yaml* package.json ./
+
 # Install dependencies
-COPY package*.json ./
-RUN npm ci
+RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN npm run build
+RUN pnpm build
 
 # Production stage
 FROM nginx:alpine

@@ -6,6 +6,14 @@
 
 > IMPORTANT: This project is under development and is not a stable, released product. It is provided "as-is", without warranty or guarantee. It works to some extent, but may be incomplete, unstable, or contain bugs. Mentions of a version such as "v2" do not imply an official release.
 
+> [!NOTE]
+> **Future Vision: The ModMorphic Merger**
+> This project is planned to be merged with **ModMorphic**. The goal is to create a unified "Personal Enterprise" platform for Minecraft modpacks.
+> - **Mod-Morphic**: Handles AI-powered modpack creation, quest generation, and `.mrpack` exports.
+> - **Hatchery**: Handles modpack imports, automated Pterodactyl/Pelican Egg generation, and remote deployment.
+>
+> The result will be a single panel where you can describe a modpack to an AI (or paste a URL), generate it, download the client files, and automatically deploy the server instance to your Pterodactyl/Pelican nodes.
+
 The website is currently functional, however, the functionality is not fully tested/verified, and egg deployment (even for Modrinth) has not been thoroughly tested. Currently, only Modrinth parsing is implemented, as CurseForge integration would require an API key, making the process significantly more complex without one.
 
 Hatchery allows users to input CurseForge or Modrinth modpack URLs, automatically converts them into Pterodactyl/Pelican "Egg" configurations, and deploys them to remote panels via API.
@@ -21,7 +29,7 @@ Hatchery allows users to input CurseForge or Modrinth modpack URLs, automaticall
 
 ## Quick Start
 
-### Using Docker (Recommended)
+### Using Podman (Recommended)
 
 ```bash
 # Clone the repository
@@ -32,7 +40,7 @@ cd hatchery
 cp .env.example .env
 
 # Start the application
-docker-compose up -d
+podman-compose up -d
 
 # Access the application
 # Frontend: http://localhost:3000
@@ -42,34 +50,45 @@ docker-compose up -d
 
 ### Local Development
 
+#### Prerequisites
+
+- Python 3.11+
+- Node.js 20+
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
+- [pnpm](https://pnpm.io/) (Node.js package manager)
+
 #### Backend
 
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
+
+# Install dependencies
+uv sync
 
 # Copy environment file
 cp .env.example .env
 
 # Run the server
-uvicorn app.main:app --reload --port 8000
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
 #### Frontend
 
 ```bash
 cd frontend
-npm install
-npm run dev
+
+# Install dependencies
+pnpm install
+
+# Run development server
+pnpm dev
 ```
 
 ## Project Structure
 
 ```
 hatchery/
-├── docker-compose.yml     # Docker orchestration
+├── docker-compose.yml     # Podman Compose config
 ├── DEVELOPMENT.md         # Developer guide
 ├── CONTRIBUTING.md        # Contribution guidelines
 ├── backend/               # Python FastAPI application
@@ -78,14 +97,16 @@ hatchery/
 │   │   ├── core/         # Config, security, database
 │   │   ├── models/       # SQLModel database models
 │   │   └── services/     # Business logic (modpack parsing, egg generation)
-│   └── requirements.txt
+│   ├── pyproject.toml    # Project config & dependencies
+│   └── uv.lock           # Lock file
 ├── frontend/              # TypeScript React application
 │   ├── src/
 │   │   ├── components/   # React components
 │   │   ├── pages/        # Page components
 │   │   ├── lib/          # Utilities and API client
 │   │   └── hooks/        # Custom React hooks
-│   └── package.json
+│   ├── package.json
+│   └── pnpm-lock.yaml
 └── legacy/                # Reference implementations (read-only)
 ```
 
