@@ -27,18 +27,9 @@
     --warning-foreground: 0 0% 0%;
     --error: 0 72% 51%;
     --error-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
     --border: 220 15% 22%;
     --input: 220 15% 22%;
     --ring: 199 89% 48%;
-    --sidebar: 220 22% 6%;
-    --sidebar-foreground: 215 15% 55%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 18%;
-    --sidebar-accent-foreground: 210 20% 95%;
-    --sidebar-border: 220 15% 15%;
   }
 }
 
@@ -56,11 +47,6 @@
   code, pre, .mono { font-family: 'JetBrains Mono', monospace; }
 }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: hsl(var(--background)); }
-::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground)); }
-
 @layer utilities {
   .terminal-glow { box-shadow: 0 0 30px hsl(var(--primary) / 0.15), inset 0 1px 0 rgba(255,255,255,0.05); }
   .scanline {
@@ -74,11 +60,7 @@
     pointer-events: none;
   }
   .text-cyan { color: hsl(var(--primary)); }
-  .bg-cyan { background-color: hsl(var(--primary)); }
-  .border-glow { border-color: hsl(var(--primary) / 0.3); }
   .text-success { color: hsl(var(--success)); }
   .text-warning { color: hsl(var(--warning)); }
   .text-error { color: hsl(var(--error)); }
-  .blink { animation: blink 1s step-end infinite; }
-  @keyframes blink { 50% { opacity: 0; } }
 }

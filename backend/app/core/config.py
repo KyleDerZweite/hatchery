@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///hatchery.db"
 
     zitadel_domain: str = "auth.kylehub.dev"
+    zitadel_project_id: str = ""
 
     @property
     def zitadel_issuer(self) -> str:

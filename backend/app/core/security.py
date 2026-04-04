@@ -115,7 +115,7 @@ async def get_current_user(
             signing_key,
             algorithms=["RS256"],
             issuer=settings.zitadel_issuer,
-            options={"verify_aud": False},  # Zitadel uses project-based audience
+            audience=settings.zitadel_project_id,
         )
 
         return User(

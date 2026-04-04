@@ -1,8 +1,9 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlmodel import select
 
+from app.api.dependencies import get_panel_or_404
 from app.core import CurrentUser, SessionDep
 from app.models import (
     PanelInstance,
@@ -62,52 +63,26 @@ async def list_panels(
 
 @router.get("/{panel_id}", response_model=PanelInstanceReadWithKey)
 async def get_panel(
-    panel_id: int,
-    current_user: CurrentUser,
-    session: SessionDep,
+    panel: PanelInstance = Depends(get_panel_or_404),
 ):
     """
     Get a specific panel instance by ID.
     Only the owner or admin can view.
     Returns the API key for the owner.
     """
-    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
-    panel = result.scalar_one_or_none()
-
-    if not panel:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
-
-    # Check permissions
-    if not current_user.is_admin and panel.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this panel"
-        )
-
     return panel
 
 
 @router.patch("/{panel_id}", response_model=PanelInstanceRead)
 async def update_panel(
-    panel_id: int,
     panel_update: PanelInstanceUpdate,
-    current_user: CurrentUser,
     session: SessionDep,
+    panel: PanelInstance = Depends(get_panel_or_404),
 ):
     """
     Update a panel instance.
     Only the owner or admin can update.
     """
-    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
-    panel = result.scalar_one_or_none()
-
-    if not panel:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
-
-    # Check permissions
-    if not current_user.is_admin and panel.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this panel"
-        )
 
     update_data = panel_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -124,35 +99,20 @@ async def update_panel(
 
 @router.delete("/{panel_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_panel(
-    panel_id: int,
-    current_user: CurrentUser,
     session: SessionDep,
+    panel: PanelInstance = Depends(get_panel_or_404),
 ):
     """
     Delete a panel instance.
     Only the owner or admin can delete.
     """
-    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
-    panel = result.scalar_one_or_none()
-
-    if not panel:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
-
-    # Check permissions
-    if not current_user.is_admin and panel.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this panel"
-        )
-
     await session.delete(panel)
     await session.commit()
 
 
 @router.post("/{panel_id}/test", status_code=status.HTTP_200_OK)
 async def test_panel_connection(
-    panel_id: int,
-    current_user: CurrentUser,
-    session: SessionDep,
+    panel: PanelInstance = Depends(get_panel_or_404),
 ):
     """
     Test connection to a panel instance.
@@ -160,17 +120,6 @@ async def test_panel_connection(
 
     TODO: Implement actual panel API connection test.
     """
-    result = await session.execute(select(PanelInstance).where(PanelInstance.id == panel_id))
-    panel = result.scalar_one_or_none()
-
-    if not panel:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Panel not found")
-
-    # Check permissions
-    if not current_user.is_admin and panel.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to test this panel"
-        )
 
     # TODO: Implement actual connection test
     return {"success": True, "message": "Connection test placeholder - implement actual API check"}

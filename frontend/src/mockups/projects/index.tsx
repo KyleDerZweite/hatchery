@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { ProjectsPage as V1ProjectsPage } from './v1/ProjectsPage';
+import { ProjectsPage as V2ProjectsPage } from './v2/ProjectsPage';
+import { ProjectsPage as V3ProjectsPage } from './v3/ProjectsPage';
 
 const versions = [
-  { id: 'v1', name: 'Violet Modern', description: 'Pangolin-inspired with soft violet accents and rounded cards' },
-  { id: 'v2', name: 'Terminal', description: 'Developer-focused with JetBrains Mono, cyan accents, scanlines' },
-  { id: 'v3', name: 'Grimoire', description: 'Medieval fantasy aesthetic with gold accents and rarity tiers' },
-  { id: 'v4', name: 'Glass', description: 'Futuristic glassmorphism with blue-purple gradients' },
-  { id: 'v5', name: 'Brutalist', description: 'Raw monochrome with sharp edges, uppercase typography' },
+  { id: 'v1', name: 'Violet Modern', description: 'Soft violet accents, rounded cards, gradient buttons' },
+  { id: 'v2', name: 'Terminal', description: 'Developer-focused, JetBrains Mono, cyan accents, scanlines' },
+  { id: 'v3', name: 'Brutalist', description: 'Raw monochrome, sharp edges, uppercase typography' },
 ];
 
 export function MockupIndex() {
@@ -13,30 +14,14 @@ export function MockupIndex() {
 
   const renderVersion = () => {
     switch (selectedVersion) {
-      case 'v1': {
-        const { ProjectsPage } = require('./v1/ProjectsPage');
-        return <ProjectsPage />;
-      }
-      case 'v2': {
-        const { ProjectsPage } = require('./v2/ProjectsPage');
-        return <ProjectsPage />;
-      }
-      case 'v3': {
-        const { ProjectsPage } = require('./v3/ProjectsPage');
-        return <ProjectsPage />;
-      }
-      case 'v4': {
-        const { ProjectsPage } = require('./v4/ProjectsPage');
-        return <ProjectsPage />;
-      }
-      case 'v5': {
-        const { ProjectsPage } = require('./v5/ProjectsPage');
-        return <ProjectsPage />;
-      }
-      default: {
-        const { ProjectsPage } = require('./v1/ProjectsPage');
-        return <ProjectsPage />;
-      }
+      case 'v1':
+        return <V1ProjectsPage />;
+      case 'v2':
+        return <V2ProjectsPage />;
+      case 'v3':
+        return <V3ProjectsPage />;
+      default:
+        return <V1ProjectsPage />;
     }
   };
 
@@ -65,9 +50,3 @@ export function MockupIndex() {
     </div>
   );
 }
-
-export { ProjectsPage as V1ProjectsPage } from './v1/ProjectsPage';
-export { ProjectsPage as V2ProjectsPage } from './v2/ProjectsPage';
-export { ProjectsPage as V3ProjectsPage } from './v3/ProjectsPage';
-export { ProjectsPage as V4ProjectsPage } from './v4/ProjectsPage';
-export { ProjectsPage as V5ProjectsPage } from './v5/ProjectsPage';

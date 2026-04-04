@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { AuthCallback, useAuth } from "./lib/auth";
+import { MockupIndex } from "./mockups/projects";
 import { DashboardPage } from "./pages/DashboardPage";
 import { EggDetailPage } from "./pages/EggDetailPage";
 import { EggsPage } from "./pages/EggsPage";
@@ -53,6 +54,10 @@ function App() {
     <Routes>
       {/* OIDC Callback */}
       <Route path="/callback" element={<AuthCallback />} />
+
+      {/* Mockup routes (public, no auth) */}
+      <Route path="/mockups" element={<MockupIndex />} />
+      <Route path="/mockups/:version" element={<MockupIndex />} />
 
       {/* Public routes */}
       <Route

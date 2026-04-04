@@ -18,11 +18,12 @@ import uuid
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlmodel import select
 
+from app.api.dependencies import get_project_or_404
 from app.core import CurrentUser, SessionDep
 from app.core.constants import LOADERS, TEMPLATES
 from app.models.mod import ModReference, ModVersion
@@ -71,6 +72,7 @@ async def create_project(
     body: ProjectCreate,
     current_user: CurrentUser,
     session: SessionDep,
+    background_tasks: BackgroundTasks,
 ) -> dict:
     """
     Create a new AI-generated modpack project.
@@ -119,30 +121,18 @@ async def create_project(
         loader=project.loader,
     )
 
-    try:
-        await _process_project_async(
-            project.id, body.user_prompt, body.mc_version, body.loader, body.templates
-        )
-        project.status = ProjectStatus.READY
-        project.updated_at = datetime.now(UTC)
-        session.add(project)
-        await session.commit()
-        await session.refresh(project)
-    except Exception as e:
-        project.status = ProjectStatus.FAILED
-        project.error_message = str(e)[:500]
-        project.updated_at = datetime.now(UTC)
-        session.add(project)
-        await session.commit()
-        logger.error(
-            "project_processing_failed",
-            project_id=str(project.id),
-            error=str(e),
-        )
+    background_tasks.add_task(
+        _process_project_async,
+        project.id,
+        body.user_prompt,
+        body.mc_version,
+        body.loader,
+        body.templates,
+    )
 
     return {
         "project": ProjectRead.from_model(project),
-        "message": "Project created and processed",
+        "message": "Project created and queued for processing",
     }
 
 
@@ -167,91 +157,109 @@ async def _process_project_async(
         if not project:
             return
 
-        project.status = ProjectStatus.PROCESSING
-        project.updated_at = datetime.now(UTC)
-        session.add(project)
-        await session.commit()
-
-        async with new_http_client() as http:
-            keywords = [w for w in user_prompt.split() if len(w) > 3][:6]
-            generic_tags = ["automation", "technology", "magic", "adventure", "utility"]
-
-            all_results = []
-            seen_ids = set()
-
-            for word in keywords + generic_tags[:2]:
-                results = await search_mods(http, word, mc_version, loader, limit=10)
-                for r in results:
-                    if r.project_id not in seen_ids:
-                        seen_ids.add(r.project_id)
-                        all_results.append(r)
-
-            candidate_descs = [
-                f"- {c.slug}: {c.title} - {c.description[:80]}... (dl: {c.downloads})"
-                for c in all_results[:100]
-            ]
-
-            ai_result = await ai.select_mods(
-                candidate_descriptions=candidate_descs,
-                user_prompt=user_prompt,
-                mc_version=mc_version,
-                loader=loader,
-                template_names=templates,
-            )
-            selected_slugs = ai_result.get("selected_slugs", [])
-            project.ai_reasoning = ai_result.get("reasoning", "")[:2000]
-
-            validated_versions: list[ModVersion] = []
-            for slug in selected_slugs:
-                try:
-                    ref, ver = await fetch_and_cache_mod(session, http, slug, mc_version, loader)
-                    if ver:
-                        validated_versions.append(ver)
-                except Exception as e:
-                    logger.warning("mod_fetch_failed", slug=slug, error=str(e))
-
-            seen_version_ids = set()
-            for ver in validated_versions:
-                if ver.id not in seen_version_ids:
-                    seen_version_ids.add(ver.id)
-                    session.add(
-                        ProjectMods(
-                            project_id=project.id,
-                            mod_version_id=ver.id,
-                            is_dependency=False,
-                        )
-                    )
-
+        try:
+            project.status = ProjectStatus.PROCESSING
+            project.updated_at = datetime.now(UTC)
+            session.add(project)
             await session.commit()
 
-            mod_descs = [
-                f"- {c.slug}: {c.title} - {c.description[:80]}"
-                for c in all_results[:50]
-                if c.slug in selected_slugs
-            ]
+            async with new_http_client() as http:
+                keywords = [w for w in user_prompt.split() if len(w) > 3][:6]
+                generic_tags = ["automation", "technology", "magic", "adventure", "utility"]
 
-            outline = await ai.generate_quest_outline(
-                mod_descriptions=mod_descs,
-                user_prompt=user_prompt,
-                template_names=templates,
-            )
+                all_results = []
+                seen_ids = set()
 
-            from app.services.quest_service import count_quests, generate_quest_files
+                for word in keywords + generic_tags[:2]:
+                    results = await search_mods(http, word, mc_version, loader, limit=10)
+                    for r in results:
+                        if r.project_id not in seen_ids:
+                            seen_ids.add(r.project_id)
+                            all_results.append(r)
 
-            quest_files = generate_quest_files(outline)
-            total = count_quests(outline)
+                candidate_descs = [
+                    f"- {c.slug}: {c.title} - {c.description[:80]}... (dl: {c.downloads})"
+                    for c in all_results[:100]
+                ]
 
-            session.add(
-                ProjectQuests(
-                    project_id=project.id,
-                    story_title=str(outline.get("title", ""))[:255],
-                    story_description=str(outline.get("description", ""))[:5000],
-                    quest_files_json=json.dumps(quest_files),
-                    total_quests=total,
+                ai_result = await ai.select_mods(
+                    candidate_descriptions=candidate_descs,
+                    user_prompt=user_prompt,
+                    mc_version=mc_version,
+                    loader=loader,
+                    template_names=templates,
                 )
-            )
+                selected_slugs = ai_result.get("selected_slugs", [])
+                project.ai_reasoning = ai_result.get("reasoning", "")[:2000]
 
+                validated_versions: list[ModVersion] = []
+                for slug in selected_slugs:
+                    try:
+                        ref, ver = await fetch_and_cache_mod(
+                            session, http, slug, mc_version, loader
+                        )
+                        if ver:
+                            validated_versions.append(ver)
+                    except Exception as e:
+                        logger.warning("mod_fetch_failed", slug=slug, error=str(e))
+
+                seen_version_ids = set()
+                for ver in validated_versions:
+                    if ver.id not in seen_version_ids:
+                        seen_version_ids.add(ver.id)
+                        session.add(
+                            ProjectMods(
+                                project_id=project.id,
+                                mod_version_id=ver.id,
+                                is_dependency=False,
+                            )
+                        )
+
+                await session.commit()
+
+                mod_descs = [
+                    f"- {c.slug}: {c.title} - {c.description[:80]}"
+                    for c in all_results[:50]
+                    if c.slug in selected_slugs
+                ]
+
+                outline = await ai.generate_quest_outline(
+                    mod_descriptions=mod_descs,
+                    user_prompt=user_prompt,
+                    template_names=templates,
+                )
+
+                from app.services.quest_service import count_quests, generate_quest_files
+
+                quest_files = generate_quest_files(outline)
+                total = count_quests(outline)
+
+                session.add(
+                    ProjectQuests(
+                        project_id=project.id,
+                        story_title=str(outline.get("title", ""))[:255],
+                        story_description=str(outline.get("description", ""))[:5000],
+                        quest_files_json=json.dumps(quest_files),
+                        total_quests=total,
+                    )
+                )
+
+            project.status = ProjectStatus.READY
+            project.updated_at = datetime.now(UTC)
+            session.add(project)
             await session.commit()
+        except Exception as e:
+            project.status = ProjectStatus.FAILED
+            project.error_message = "Internal error occurred while processing."
+            project.updated_at = datetime.now(UTC)
+            session.add(project)
+            await session.commit()
+            logger.error(
+                "project_processing_failed",
+                project_id=str(project.id),
+                error=str(e),
+                exc_info=True,
+            )
 
 
 @router.get("", response_model=ProjectListRead)
@@ -284,9 +292,7 @@ async def list_projects(
 
 @router.get("/{project_id}", response_model=ProjectRead)
 async def get_project(
-    project_id: uuid.UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
+    project: Project = Depends(get_project_or_404),
 ) -> ProjectRead:
     """
     Get a specific project by ID.
@@ -294,53 +300,24 @@ async def get_project(
     Users can only access their own projects.
     Admins can access all projects.
     """
-    project = await session.get(Project, project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-
-    if not current_user.is_admin and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this project",
-        )
-
     return ProjectRead.from_model(project)
 
 
 @router.get("/{project_id}/mods", response_model=ProjectModsRead)
 async def get_project_mods(
-    project_id: uuid.UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
+    project: Project = Depends(get_project_or_404),
+    session: SessionDep = Depends(),
 ) -> dict:
     """
     Get all mods for a project.
 
     Users can only access their own projects.
     """
-    project = await session.get(Project, project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-
-    if not current_user.is_admin and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this project",
-        )
-
     stmt = (
         select(ProjectMods, ModVersion, ModReference)
         .join(ModVersion, ProjectMods.mod_version_id == ModVersion.id)
         .join(ModReference, ModVersion.mod_reference_id == ModReference.id)
-        .where(ProjectMods.project_id == project_id)
+        .where(ProjectMods.project_id == project.id)
         .order_by(ProjectMods.is_dependency, ModReference.title)
     )
     result = await session.exec(stmt)
@@ -365,30 +342,15 @@ async def get_project_mods(
 
 @router.get("/{project_id}/quests", response_model=ProjectQuestsRead)
 async def get_project_quests(
-    project_id: uuid.UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
+    project: Project = Depends(get_project_or_404),
+    session: SessionDep = Depends(),
 ) -> dict:
     """
     Get quest data for a project.
 
     Users can only access their own projects.
     """
-    project = await session.get(Project, project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-
-    if not current_user.is_admin and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this project",
-        )
-
-    stmt = select(ProjectQuests).where(ProjectQuests.project_id == project_id)
+    stmt = select(ProjectQuests).where(ProjectQuests.project_id == project.id)
     result = await session.exec(stmt)
     quests = result.first()
 
@@ -415,9 +377,8 @@ async def get_project_quests(
 
 @router.get("/{project_id}/export")
 async def export_project(
-    project_id: uuid.UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
+    project: Project = Depends(get_project_or_404),
+    session: SessionDep = Depends(),
 ) -> Response:
     """
     Download the .mrpack for a completed project.
@@ -425,32 +386,18 @@ async def export_project(
     Users can only export their own projects.
     Project must be in READY status.
     """
-    project = await session.get(Project, project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-
-    if not current_user.is_admin and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to export this project",
-        )
-
     if project.status != ProjectStatus.READY:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Project is not ready (status={project.status})",
         )
 
-    mrpack_bytes = await export_service.generate_mrpack(session, project_id)
+    mrpack_bytes = await export_service.generate_mrpack(session, project.id)
     filename = await export_service.generate_mrpack_filename(project)
 
     logger.info(
         "project_exported",
-        project_id=str(project_id),
+        project_id=str(project.id),
         filename=filename,
         size_bytes=len(mrpack_bytes),
     )
@@ -467,9 +414,8 @@ async def export_project(
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
-    project_id: uuid.UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
+    project: Project = Depends(get_project_or_404),
+    session: SessionDep = Depends(),
 ) -> None:
     """
     Delete a project.
@@ -477,25 +423,11 @@ async def delete_project(
     Users can only delete their own projects.
     Admins can delete any project.
     """
-    project = await session.get(Project, project_id)
-
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Project not found",
-        )
-
-    if not current_user.is_admin and project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this project",
-        )
-
     await session.delete(project)
     await session.commit()
 
     logger.info(
         "project_deleted",
-        project_id=str(project_id),
-        owner_id=current_user.id,
+        project_id=str(project.id),
+        owner_id=project.owner_id,
     )

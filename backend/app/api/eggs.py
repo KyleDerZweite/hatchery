@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlmodel import or_, select
 
+from app.api.dependencies import get_egg_or_404_read, get_egg_or_404_write
 from app.core import CurrentUser, SessionDep
 from app.models import (
     EggConfig,
@@ -100,55 +101,28 @@ async def list_eggs(
 
 @router.get("/{egg_id}", response_model=EggConfigReadFull)
 async def get_egg(
-    egg_id: int,
-    current_user: CurrentUser,
-    session: SessionDep,
+    egg: EggConfig = Depends(get_egg_or_404_read),
 ):
     """
     Get a specific egg configuration by ID.
 
     Returns the full egg JSON data.
     """
-    result = await session.execute(select(EggConfig).where(EggConfig.id == egg_id))
-    egg = result.scalar_one_or_none()
-
-    if not egg:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
-
-    # Check permissions
-    if not current_user.is_admin:
-        if egg.owner_id != current_user.id and egg.visibility != Visibility.PUBLIC:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this egg"
-            )
-
     return egg
 
 
 @router.patch("/{egg_id}", response_model=EggConfigRead)
 async def update_egg(
-    egg_id: int,
     egg_update: EggConfigUpdate,
-    current_user: CurrentUser,
     session: SessionDep,
-    modpack_service: Annotated[ModpackService, Depends(get_modpack_service)],
+    egg: EggConfig = Depends(get_egg_or_404_write),
+    modpack_service: ModpackService = Depends(get_modpack_service),
 ):
     """
     Update an egg configuration.
 
     Only the owner or admin can update.
     """
-    result = await session.execute(select(EggConfig).where(EggConfig.id == egg_id))
-    egg = result.scalar_one_or_none()
-
-    if not egg:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
-
-    # Check permissions
-    if not current_user.is_admin and egg.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this egg"
-        )
 
     update_data = egg_update.model_dump(exclude_unset=True)
 
@@ -172,79 +146,40 @@ async def update_egg(
 
 @router.delete("/{egg_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_egg(
-    egg_id: int,
-    current_user: CurrentUser,
     session: SessionDep,
+    egg: EggConfig = Depends(get_egg_or_404_write),
 ):
     """
     Delete an egg configuration.
 
     Only the owner or admin can delete.
     """
-    result = await session.execute(select(EggConfig).where(EggConfig.id == egg_id))
-    egg = result.scalar_one_or_none()
-
-    if not egg:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
-
-    # Check permissions
-    if not current_user.is_admin and egg.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this egg"
-        )
-
     await session.delete(egg)
     await session.commit()
 
 
 @router.get("/{egg_id}/export", response_model=dict)
 async def export_egg_json(
-    egg_id: int,
-    current_user: CurrentUser,
-    session: SessionDep,
+    egg: EggConfig = Depends(get_egg_or_404_read),
 ):
     """
     Export the raw Pterodactyl egg JSON for download/import.
     """
-    result = await session.execute(select(EggConfig).where(EggConfig.id == egg_id))
-    egg = result.scalar_one_or_none()
-
-    if not egg:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
-
-    # Check permissions
-    if not current_user.is_admin:
-        if egg.owner_id != current_user.id and egg.visibility != Visibility.PUBLIC:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to export this egg"
-            )
-
     return egg.json_data
 
 
 @router.post("/{egg_id}/regenerate", response_model=EggConfigReadFull)
 async def regenerate_egg(
-    egg_id: int,
-    current_user: CurrentUser,
     session: SessionDep,
-    modpack_service: Annotated[ModpackService, Depends(get_modpack_service)],
+    current_user: CurrentUser,
+    egg: EggConfig = Depends(get_egg_or_404_write),
+    modpack_service: ModpackService = Depends(get_modpack_service),
 ):
     """
     Regenerate the egg JSON from the source URL.
 
     Useful if the modpack has been updated or the egg generation logic has changed.
     """
-    result = await session.execute(select(EggConfig).where(EggConfig.id == egg_id))
-    egg = result.scalar_one_or_none()
-
-    if not egg:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Egg not found")
-
-    # Check permissions
-    if not current_user.is_admin and egg.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to regenerate this egg"
-        )
 
     # Re-fetch modpack info
     modpack_info = await modpack_service.fetch_modpack_info(egg.source_url)

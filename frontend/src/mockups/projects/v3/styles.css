@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Source+Sans+3:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,76 +6,55 @@
 
 @layer base {
   :root {
-    --radius: 0.25rem;
-    --background: 40 20% 6%;
-    --foreground: 40 10% 92%;
-    --card: 40 18% 10%;
-    --card-foreground: 40 10% 92%;
-    --popover: 40 16% 8%;
-    --popover-foreground: 40 10% 92%;
-    --primary: 38 92% 50%;
-    --primary-foreground: 20 10% 10%;
-    --secondary: 40 12% 18%;
-    --secondary-foreground: 40 10% 92%;
-    --muted: 40 12% 22%;
-    --muted-foreground: 30 10% 50%;
-    --accent: 38 92% 50%;
-    --accent-foreground: 20 10% 10%;
-    --success: 80 60% 40%;
+    --radius: 0;
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 8%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 6%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 355 100% 60%;
+    --accent-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 20 10% 10%;
-    --error: 0 50% 45%;
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 5%;
+    --error: 355 100% 60%;
     --error-foreground: 0 0% 100%;
-    --destructive: 0 50% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 40 15% 25%;
-    --input: 40 15% 25%;
-    --ring: 38 92% 50%;
-    --sidebar: 40 22% 4%;
-    --sidebar-foreground: 30 10% 50%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 20 10% 10%;
-    --sidebar-accent: 40 12% 18%;
-    --sidebar-accent-foreground: 40 10% 92%;
-    --sidebar-border: 40 15% 15%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 100%;
   }
 }
 
 @layer base {
   * { @apply border-border; }
   html {
-    font-family: 'Source Sans 3', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   body { @apply bg-background text-foreground; }
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Playfair Display', serif;
-    letter-spacing: -0.01em;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
   }
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: hsl(var(--background)); }
-::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
-
 @layer utilities {
-  .border-ornate { border-image: linear-gradient(to right, transparent, hsl(var(--border)), transparent) 1; }
-  .text-gold { color: hsl(var(--primary)); }
-  .bg-gold { background-color: hsl(var(--primary)); }
-  .corner-ornament::before,
-  .corner-ornament::after {
-    content: '◆';
-    position: absolute;
-    color: hsl(var(--primary) / 0.4);
-    font-size: 8px;
-  }
-  .corner-ornament::before { top: -2px; left: -8px; }
-  .corner-ornament::after { bottom: -2px; right: -8px; }
-  .text-success { color: hsl(var(--success)); }
-  .text-warning { color: hsl(var(--warning)); }
-  .text-error { color: hsl(var(--error)); }
-  .sepia-card {
-    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(40 18% 12%) 100%);
+  .text-accent { color: hsl(var(--accent)); }
+  .bg-accent { background-color: hsl(var(--accent)); }
+  .border-accent { border-color: hsl(var(--accent)); }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .brutal-shadow { box-shadow: 4px 4px 0 hsl(var(--border)); }
+  .brutal-shadow-accent { box-shadow: 4px 4px 0 hsl(var(--accent)); }
+  .noise {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
   }
 }

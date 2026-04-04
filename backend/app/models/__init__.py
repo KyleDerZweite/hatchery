@@ -1,3 +1,4 @@
+from app.models.ai_config import UserAIConfig
 from app.models.egg import (
     EggConfig,
     EggConfigCreate,
@@ -35,6 +36,7 @@ from app.models.project import (
 )
 
 __all__ = [
+    "UserAIConfig",
     "EggConfig",
     "EggConfigCreate",
     "EggConfigRead",
