@@ -1,11 +1,8 @@
-import uuid
-
 from fastapi import HTTPException, status
 
 from app.core import CurrentUser, SessionDep
 from app.models.egg import EggConfig, Visibility
 from app.models.panel import PanelInstance
-from app.models.project import Project
 
 
 class GenericFetcher:
@@ -14,7 +11,7 @@ class GenericFetcher:
     @staticmethod
     async def _fetch_and_validate_owner(
         model,
-        item_id: int | uuid.UUID,
+        item_id: int,
         session: SessionDep,
         current_user: CurrentUser,
         allow_public: bool = False,
@@ -34,14 +31,6 @@ class GenericFetcher:
                     detail=f"Not authorized to access this {model.__name__}",
                 )
         return item
-
-
-async def get_project_or_404(
-    project_id: uuid.UUID, session: SessionDep, current_user: CurrentUser
-) -> Project:
-    return await GenericFetcher._fetch_and_validate_owner(
-        Project, project_id, session, current_user
-    )
 
 
 async def get_panel_or_404(
