@@ -1,10 +1,12 @@
 [project]
 name = "hatchery-backend"
 version = "0.2.0"
-description = "Hatchery - Modpack-to-Server Automation Platform with AI-powered Creation"
+description = "Hatchery backend"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.14.0",
+    "cryptography>=44.0.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "sqlmodel>=0.0.22",
@@ -17,10 +19,6 @@ dependencies = [
     "pydantic>=2.10.0",
     "pydantic-settings>=2.6.0",
     "python-dotenv>=1.0.0",
-    "email-validator>=2.2.0",
-    "openai>=1.55.0",
-    "arq>=0.26.0",
-    "redis>=5.2.0",
     "structlog>=24.4.0",
 ]
 
@@ -107,6 +105,7 @@ exclude = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]

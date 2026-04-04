@@ -13,7 +13,7 @@ export interface ZitadelUser {
 }
 
 /**
- * Custom auth hook with Kylehub-specific helpers.
+ * Custom auth hook with Zitadel-specific helpers.
  *
  * Provides:
  * - user: The authenticated user's profile

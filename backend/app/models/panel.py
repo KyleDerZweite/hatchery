@@ -1,32 +1,30 @@
 from datetime import UTC, datetime
+from typing import Literal
 
 from sqlmodel import Field, SQLModel
 
 
 class PanelInstanceBase(SQLModel):
-    """Base panel instance model with shared fields."""
-
     name: str = Field(min_length=1, max_length=100)
-    url: str = Field(min_length=1, max_length=500)  # e.g., https://panel.example.com
+    url: str = Field(min_length=1, max_length=500)
     description: str | None = Field(default=None, max_length=500)
     is_active: bool = Field(default=True)
 
 
 class PanelInstance(PanelInstanceBase, table=True):
-    """Panel instance database model."""
-
     __tablename__ = "panel_instances"
 
     id: int | None = Field(default=None, primary_key=True)
-    api_key: str  # Stored encrypted or plain text for MVP
-    owner_id: str = Field(index=True)  # Zitadel subject (unique user ID)
+    api_key_encrypted: str = Field(max_length=4096)
+    owner_id: str = Field(index=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_tested_at: datetime | None = Field(default=None)
+    last_test_status: str = Field(default="untested", max_length=32)
+    last_test_message: str = Field(default="", max_length=500)
 
 
 class PanelInstanceCreate(SQLModel):
-    """Schema for creating a new panel instance."""
-
     name: str = Field(min_length=1, max_length=100)
     url: str = Field(min_length=1, max_length=500)
     api_key: str = Field(min_length=1)
@@ -34,25 +32,27 @@ class PanelInstanceCreate(SQLModel):
 
 
 class PanelInstanceRead(PanelInstanceBase):
-    """Schema for reading panel instance data (public)."""
-
     id: int
     owner_id: str
     created_at: datetime
-    # Note: api_key is intentionally excluded for security
-
-
-class PanelInstanceReadWithKey(PanelInstanceRead):
-    """Schema for reading panel instance with API key (owner only)."""
-
-    api_key: str
+    updated_at: datetime
+    last_tested_at: datetime | None = None
+    last_test_status: str
+    last_test_message: str
+    has_api_key: bool = True
 
 
 class PanelInstanceUpdate(SQLModel):
-    """Schema for updating panel instance data."""
-
     name: str | None = Field(default=None, min_length=1, max_length=100)
     url: str | None = Field(default=None, min_length=1, max_length=500)
     api_key: str | None = Field(default=None, min_length=1)
     description: str | None = Field(default=None, max_length=500)
     is_active: bool | None = None
+
+
+class PanelConnectionTestResult(SQLModel):
+    success: bool
+    status: Literal["ok", "failed"]
+    message: str
+    panel_type: str | None = None
+    checked_endpoint: str | None = None

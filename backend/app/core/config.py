@@ -1,4 +1,6 @@
+import base64
 from functools import lru_cache
+from hashlib import sha256
 from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,6 +26,9 @@ class Settings(BaseSettings):
     debug: bool = False
 
     database_url: str = "sqlite:///hatchery.db"
+    secret_key: str = "change-me"
+    panel_api_key_encryption_secret: str = "change-me"
+    panel_api_timeout_seconds: float = 10.0
 
     zitadel_domain: str = "auth.kylehub.dev"
     zitadel_project_id: str = ""
@@ -38,15 +43,7 @@ class Settings(BaseSettings):
 
     curseforge_api_key: str = ""
 
-    openrouter_api_key: str = ""
-    openrouter_model: str = "google/gemini-2.5-flash"
-    openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    ai_max_tokens: int = 16384
-    ai_temperature: float = 0.7
-
-    redis_url: str = "redis://localhost:6379"
-
-    modrinth_user_agent: str = "Hatchery/0.2.0 (https://github.com/hatchery)"
+    modrinth_user_agent: str = "Hatchery/0.2.0"
 
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]
 
@@ -63,8 +60,9 @@ class Settings(BaseSettings):
         return self.database_url
 
     @property
-    def ai_enabled(self) -> bool:
-        return bool(self.openrouter_api_key)
+    def panel_encryption_key(self) -> bytes:
+        secret = self.panel_api_key_encryption_secret or self.secret_key
+        return base64.urlsafe_b64encode(sha256(secret.encode("utf-8")).digest())
 
 
 @lru_cache

@@ -2,8 +2,8 @@ from collections.abc import AsyncGenerator
 from typing import Annotated
 
 from fastapi import Depends
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel
 
 from app.core.config import settings
 
@@ -26,7 +26,7 @@ async_session_factory = async_session_maker
 
 async def init_db() -> None:
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.execute(text("SELECT 1"))
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
