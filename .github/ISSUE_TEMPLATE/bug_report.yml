@@ -1,0 +1,70 @@
+name: Bug report
+description: Report a reproducible defect in the MVP surface.
+title: "bug: "
+labels:
+  - type:bug
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - backend
+        - frontend
+        - auth
+        - infra
+        - docs
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State the defect and why it matters.
+      placeholder: The panel connection validation accepts an invalid base URL and later fails on export.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide a deterministic reproduction with exact inputs.
+      placeholder: |
+        1. Start the stack with ...
+        2. Open ...
+        3. Submit ...
+        4. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: Validation rejects the URL before the panel record is persisted.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, traces, or screenshots
+      description: Paste the relevant backend log lines, frontend console output, or screenshots.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: List versions or deployment details that matter.
+      placeholder: |
+        OS:
+        Browser:
+        Podman / Compose version:
+        Python / Node version:
+    validations:
+      required: true
