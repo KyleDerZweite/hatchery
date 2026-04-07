@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: MVP scope
+    url: https://github.com/KyleDerZweite/hatchery/blob/main/MVP_PLAN.md
+    about: Check the current MVP boundary before opening a proposal.
+  - name: Product strategy
+    url: https://github.com/KyleDerZweite/hatchery/blob/main/PRODUCT_STRATEGY.md
+    about: Review the longer-term technical direction and constraints.
+  - name: Security policy
+    url: https://github.com/KyleDerZweite/hatchery/security/policy
+    about: Report vulnerabilities through private vulnerability reporting, not public issues.

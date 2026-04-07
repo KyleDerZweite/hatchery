@@ -14,7 +14,7 @@ export function LoginPage() {
           {/* Logo/Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 mb-4">
-              <span className="text-3xl">🥚</span>
+              <span className="text-3xl">H</span>
             </div>
             <h1 className="text-2xl font-bold text-foreground">Hatchery</h1>
             <p className="text-muted-foreground mt-2">
@@ -48,7 +48,7 @@ export function LoginPage() {
                     d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
                   />
                 </svg>
-                Sign in with Kylehub
+                Sign in with Zitadel
               </>
             )}
           </button>

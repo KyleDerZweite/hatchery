@@ -7,10 +7,13 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///data/hatchery.db}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://hatchery:hatchery@postgres:5432/hatchery}
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - PANEL_API_KEY_ENCRYPTION_SECRET=${PANEL_API_KEY_ENCRYPTION_SECRET:-change-me-in-production}
       - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY:-}
+      - ZITADEL_DOMAIN=${ZITADEL_DOMAIN:-auth.example.com}
+      - ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000","http://localhost:5173"]}
     volumes:
       - backend_data:/app/data
     restart: unless-stopped
@@ -20,17 +23,20 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    # Uncomment the following lines if using PostgreSQL
-    # depends_on:
-    #   postgres:
-    #     condition: service_healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+        - VITE_API_URL=${VITE_API_URL:-}
+        - VITE_ZITADEL_AUTHORITY=${VITE_ZITADEL_AUTHORITY:-}
+        - VITE_ZITADEL_CLIENT_ID=${VITE_ZITADEL_CLIENT_ID:-}
+        - VITE_ZITADEL_REDIRECT_URI=${VITE_ZITADEL_REDIRECT_URI:-}
+        - VITE_ZITADEL_POST_LOGOUT_URI=${VITE_ZITADEL_POST_LOGOUT_URI:-}
     container_name: hatchery-frontend
     ports:
       - "3000:80"
@@ -38,26 +44,39 @@ services:
       - backend
     restart: unless-stopped
 
-  # PostgreSQL Database (Optional - Uncomment to use instead of SQLite)
-  # postgres:
-  #   image: postgres:16-alpine
-  #   container_name: hatchery-postgres
-  #   environment:
-  #     POSTGRES_USER: ${POSTGRES_USER:-hatchery}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hatchery}
-  #     POSTGRES_DB: ${POSTGRES_DB:-hatchery}
-  #   volumes:
-  #     - postgres_data:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hatchery} -d ${POSTGRES_DB:-hatchery}"]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 5
-  #     start_period: 10s
+  postgres:
+    image: postgres:16-alpine
+    container_name: hatchery-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-hatchery}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-hatchery}
+      POSTGRES_DB: ${POSTGRES_DB:-hatchery}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hatchery} -d ${POSTGRES_DB:-hatchery}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  newt:
+    image: docker.io/fosrl/newt:latest
+    container_name: hatchery-newt
+    restart: unless-stopped
+    profiles: ["pangolin"]
+    env_file:
+      - .env
+    environment:
+      PANGOLIN_ENDPOINT: ${PANGOLIN_ENDPOINT}
+      NEWT_ID: ${NEWT_ID}
+      NEWT_SECRET: ${NEWT_SECRET}
+    depends_on:
+      - frontend
 
 volumes:
   backend_data:
-  # postgres_data:  # Uncomment if using PostgreSQL
+  postgres_data:

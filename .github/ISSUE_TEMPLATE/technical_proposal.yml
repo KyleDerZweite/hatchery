@@ -1,0 +1,46 @@
+name: Technical proposal
+description: Propose a concrete change to the MVP or maintenance posture.
+title: "proposal: "
+labels:
+  - type:feature
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: Describe the operational or product gap.
+      placeholder: Editing generated eggs is possible, but there is no schema validation before export.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: State what is in scope and what is explicitly out of scope.
+    validations:
+      required: true
+
+  - type: textarea
+    id: design
+    attributes:
+      label: Proposed approach
+      description: Focus on interfaces, data model changes, and migration impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Briefly explain rejected options and why.
+    validations:
+      required: false
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and rollout notes
+      description: Include compatibility, migration, and operational concerns.
+    validations:
+      required: true

@@ -9,7 +9,7 @@ import {
 import { EggConfig, eggsApi, PanelInstance, panelsApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Egg, FileText, Lock, Plus, Server, Unlock } from "lucide-react";
+import { ArrowRight, Egg, Lock, Plus, Server, Unlock } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export function DashboardPage() {
@@ -35,18 +35,16 @@ export function DashboardPage() {
           <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {user?.name || user?.email}!</p>
         </div>
-        <div className="flex gap-3">
-          <Button className="bg-primary/10 text-primary hover:bg-primary/20 border-none shadow-none">
-            View Documentation
-          </Button>
-        </div>
+        <Button asChild className="bg-primary/10 text-primary hover:bg-primary/20 border-none shadow-none">
+          <Link to="/eggs">Open Eggs</Link>
+        </Button>
       </div>
 
       {/* Stats */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[
           { title: "Total Eggs", value: eggs.length, icon: Egg, desc: "Generated configurations" },
-          { title: "Panel Instances", value: panels.length, icon: FileText, desc: "Connected game panels" },
+          { title: "Panel Instances", value: panels.length, icon: Server, desc: "Connected game panels" },
           { title: "Public Eggs", value: eggs.filter((e) => e.visibility === "public").length, icon: Unlock, desc: "Shared with community" },
           { title: "Private Eggs", value: eggs.filter((e) => e.visibility === "private").length, icon: Lock, desc: "Only visible to you" },
         ].map((stat, i) => (
@@ -154,4 +152,3 @@ export function DashboardPage() {
     </div>
   );
 }
-

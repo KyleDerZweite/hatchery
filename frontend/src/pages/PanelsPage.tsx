@@ -18,7 +18,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
-import { PanelCreateData, PanelInstance, panelsApi } from "@/lib/api";
+import {
+  PanelConnectionResult,
+  PanelCreateData,
+  PanelInstance,
+  panelsApi,
+} from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import {
@@ -83,15 +88,16 @@ export function PanelsPage() {
   });
 
   const testMutation = useMutation<
-    { success: boolean; message: string },
+    PanelConnectionResult,
     AxiosError<{ detail: string }>,
     number
   >({
     mutationFn: (id: number) => panelsApi.test(id),
     onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["panels"] });
       toast({
         title: data.success ? "Connection successful" : "Connection failed",
-        description: data.message,
+        description: data.panel_type ? `${data.message} (${data.panel_type})` : data.message,
       });
     },
     onError: (error: AxiosError<{ detail: string }>) => {
@@ -258,6 +264,14 @@ export function PanelsPage() {
                     {panel.description}
                   </p>
                 )}
+                <div className="mb-4 rounded-md border border-border bg-background/40 p-3 text-xs">
+                  <p className="font-medium text-foreground">
+                    Status: {panel.last_test_status}
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    {panel.last_test_message || "Not tested yet."}
+                  </p>
+                </div>
                 <div className="flex items-center gap-2 mt-2">
                   <Button
                     size="sm"

@@ -6,11 +6,18 @@ from sqlmodel import select
 from app.api.dependencies import get_panel_or_404
 from app.core import CurrentUser, SessionDep
 from app.models import (
+    PanelConnectionTestResult,
     PanelInstance,
     PanelInstanceCreate,
     PanelInstanceRead,
-    PanelInstanceReadWithKey,
     PanelInstanceUpdate,
+)
+from app.services.panel_service import (
+    decrypt_panel_api_key,
+    encrypt_panel_api_key,
+)
+from app.services.panel_service import (
+    test_panel_connection as run_panel_connection_test,
 )
 
 router = APIRouter(prefix="/panels", tags=["Panel Instances"])
@@ -22,11 +29,11 @@ async def create_panel(
     current_user: CurrentUser,
     session: SessionDep,
 ):
-    """
-    Create a new panel instance.
-    """
     panel = PanelInstance(
-        **panel_data.model_dump(),
+        name=panel_data.name,
+        url=panel_data.url,
+        description=panel_data.description,
+        api_key_encrypted=encrypt_panel_api_key(panel_data.api_key),
         owner_id=current_user.id,
     )
 
@@ -61,15 +68,10 @@ async def list_panels(
     return result.scalars().all()
 
 
-@router.get("/{panel_id}", response_model=PanelInstanceReadWithKey)
+@router.get("/{panel_id}", response_model=PanelInstanceRead)
 async def get_panel(
     panel: PanelInstance = Depends(get_panel_or_404),
 ):
-    """
-    Get a specific panel instance by ID.
-    Only the owner or admin can view.
-    Returns the API key for the owner.
-    """
     return panel
 
 
@@ -79,13 +81,11 @@ async def update_panel(
     session: SessionDep,
     panel: PanelInstance = Depends(get_panel_or_404),
 ):
-    """
-    Update a panel instance.
-    Only the owner or admin can update.
-    """
-
     update_data = panel_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
+        if key == "api_key" and value is not None:
+            panel.api_key_encrypted = encrypt_panel_api_key(value)
+            continue
         setattr(panel, key, value)
 
     panel.updated_at = datetime.now(UTC)
@@ -102,24 +102,23 @@ async def delete_panel(
     session: SessionDep,
     panel: PanelInstance = Depends(get_panel_or_404),
 ):
-    """
-    Delete a panel instance.
-    Only the owner or admin can delete.
-    """
     await session.delete(panel)
     await session.commit()
 
 
-@router.post("/{panel_id}/test", status_code=status.HTTP_200_OK)
+@router.post("/{panel_id}/test", response_model=PanelConnectionTestResult)
 async def test_panel_connection(
+    session: SessionDep,
     panel: PanelInstance = Depends(get_panel_or_404),
 ):
-    """
-    Test connection to a panel instance.
-    Only the owner or admin can test.
-
-    TODO: Implement actual panel API connection test.
-    """
-
-    # TODO: Implement actual connection test
-    return {"success": True, "message": "Connection test placeholder - implement actual API check"}
+    result = await run_panel_connection_test(
+        base_url=panel.url,
+        api_key=decrypt_panel_api_key(panel.api_key_encrypted),
+    )
+    panel.last_tested_at = datetime.now(UTC)
+    panel.last_test_status = result.status
+    panel.last_test_message = result.message
+    session.add(panel)
+    await session.commit()
+    await session.refresh(panel)
+    return result

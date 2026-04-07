@@ -19,7 +19,7 @@ export function SettingsPage() {
         <CardHeader>
           <CardTitle>Profile</CardTitle>
           <CardDescription>
-            Your account information (managed by Kylehub)
+            Your account information managed by Zitadel
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -38,7 +38,7 @@ export function SettingsPage() {
           <div className="pt-4">
             <Button onClick={openSettings} variant="outline" className="gap-2">
               <ExternalLink className="h-4 w-4" />
-              Manage Account in Kylehub
+              Manage Account in Zitadel
             </Button>
             <p className="text-xs text-muted-foreground mt-2">
               Change your password, profile picture, and other account settings
@@ -47,28 +47,6 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="card-vine">
-        <CardHeader>
-          <CardTitle>API Configuration</CardTitle>
-          <CardDescription>
-            Configure external API keys for modpack fetching
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>CurseForge API Key</Label>
-            <Input 
-              type="password" 
-              placeholder="Configure in server environment" 
-              disabled 
-              className="bg-black/20 border-success/10"
-            />
-            <p className="text-xs text-muted-foreground">
-              CurseForge API key is configured on the server via CURSEFORGE_API_KEY environment variable
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

@@ -1,19 +1,19 @@
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import JSON
 from sqlmodel import Column, Field, SQLModel
 
 
-class Visibility(str, Enum):
+class Visibility(StrEnum):
     """Egg visibility enumeration."""
 
     PUBLIC = "public"
     PRIVATE = "private"
 
 
-class ModpackSource(str, Enum):
+class ModpackSource(StrEnum):
     """Modpack source platform enumeration."""
 
     CURSEFORGE = "curseforge"

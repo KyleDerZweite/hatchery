@@ -8,18 +8,20 @@ This service handles:
 """
 
 import re
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import httpx
+from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.models.egg import ModpackSource
 
 
-class ModpackType(str, Enum):
+class ModpackType(StrEnum):
     """Supported modloader types."""
 
     FORGE = "forge"
@@ -72,7 +74,8 @@ class ModpackService:
 
     def __init__(self):
         self.http_client = httpx.AsyncClient(
-            timeout=30.0, headers={"User-Agent": "Hatchery/1.0 (https://github.com/hatchery)"}
+            timeout=30.0,
+            headers={"User-Agent": settings.modrinth_user_agent},
         )
 
     async def close(self):
@@ -120,16 +123,12 @@ class ModpackService:
 
         if source == ModpackSource.MODRINTH and slug:
             return await self._fetch_modrinth_info(slug, version_id, url)
-        elif source == ModpackSource.CURSEFORGE and slug:
+        if source == ModpackSource.CURSEFORGE and slug:
             return await self._fetch_curseforge_info(slug, version_id, url)
-        else:
-            # Return placeholder for unknown sources
-            return ModpackInfo(
-                name="Unknown Modpack",
-                source=source,
-                source_url=url,
-                description="Unable to parse modpack URL. Please provide a valid CurseForge or Modrinth URL.",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported modpack URL. Use a Modrinth or CurseForge modpack URL.",
+        )
 
     async def _fetch_modrinth_info(
         self, slug: str, version_id: str | None, url: str
@@ -214,9 +213,10 @@ class ModpackService:
             info.java_version = self._detect_java_version(info.minecraft_version)
 
         except Exception as e:
-            # Fallback on error
-            info.name = slug.replace("-", " ").title()
-            info.description = f"Modrinth modpack: {slug} (Error fetching details: {e})"
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Unable to fetch Modrinth modpack metadata: {e}",
+            ) from e
 
         return info
 
@@ -228,12 +228,12 @@ class ModpackService:
             slug=slug,
         )
 
-        # CurseForge API requires an API key
         api_key = settings.curseforge_api_key
         if not api_key:
-            info.name = slug.replace("-", " ").title()
-            info.description = f"CurseForge modpack: {slug} (API key not configured)"
-            return info
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="CurseForge support is unavailable because CURSEFORGE_API_KEY is not configured.",
+            )
 
         try:
             headers = {"x-api-key": api_key}
@@ -309,8 +309,10 @@ class ModpackService:
             info.java_version = self._detect_java_version(info.minecraft_version)
 
         except Exception as e:
-            info.name = slug.replace("-", " ").title()
-            info.description = f"CurseForge modpack: {slug} (Error: {e})"
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Unable to fetch CurseForge modpack metadata: {e}",
+            ) from e
 
         return info
 
@@ -418,10 +420,8 @@ class ModpackService:
         # Safer approach: Use the modloader stored in EggConfig if passed, otherwise try to guess
         modloader_enum = ModpackType.FORGE
         if modloader:
-            try:
+            with suppress(ValueError):
                 modloader_enum = ModpackType(modloader.lower())
-            except ValueError:
-                pass
 
         egg_json["startup"] = self._get_startup_command(modloader_enum, java_version)
 

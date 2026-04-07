@@ -56,10 +56,10 @@ api.interceptors.response.use(
 // Types
 export interface User {
   id: string
-  sub: string
-  username?: string
-  email?: string
-  name?: string
+  email: string
+  name: string
+  roles: string[]
+  is_admin: boolean
   role: 'admin' | 'user'
 }
 
@@ -69,9 +69,13 @@ export interface PanelInstance {
   url: string
   description?: string
   is_active: boolean
-  owner_id: number
+  owner_id: string
   created_at: string
-  api_key?: string
+  updated_at: string
+  last_tested_at?: string | null
+  last_test_status: string
+  last_test_message: string
+  has_api_key: boolean
 }
 
 export interface PanelCreateData {
@@ -92,10 +96,18 @@ export interface EggConfig {
   minecraft_version?: string
   modloader?: string
   modloader_version?: string
-  owner_id: number
+  owner_id: string
   created_at: string
   updated_at: string
   json_data?: Record<string, unknown>
+}
+
+export interface PanelConnectionResult {
+  success: boolean
+  status: 'ok' | 'failed'
+  message: string
+  panel_type?: string | null
+  checked_endpoint?: string | null
 }
 
 export interface EggCreateData {
@@ -130,7 +142,7 @@ export const panelsApi = {
     await api.delete(`/panels/${id}`)
   },
   
-  test: async (id: number): Promise<{ success: boolean; message: string }> => {
+  test: async (id: number): Promise<PanelConnectionResult> => {
     const response = await api.post(`/panels/${id}/test`)
     return response.data
   },
