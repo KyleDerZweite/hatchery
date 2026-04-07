@@ -19,6 +19,10 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="Modpack-to-Server Automation Platform",
+    license_info={
+        "name": "GNU Affero General Public License v3.0 or later",
+        "identifier": "AGPL-3.0-or-later",
+    },
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -52,4 +56,5 @@ async def root():
         "version": settings.app_version,
         "docs": "/docs",
         "health": "/health",
+        "license": "AGPL-3.0-or-later",
     }

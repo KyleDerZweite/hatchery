@@ -1,6 +1,7 @@
 # Hatchery
 
 Hatchery is a self hosted modpack to egg workflow for Minecraft server operators.
+It is licensed under the GNU Affero General Public License v3.0 or later.
 
 ## MVP
 
@@ -51,6 +52,10 @@ Enable Pangolin only when needed:
 ```bash
 podman-compose --profile pangolin up -d
 ```
+
+## License
+
+AGPLv3 or later. See [LICENSE](./LICENSE).
 
 ## Backend
 
