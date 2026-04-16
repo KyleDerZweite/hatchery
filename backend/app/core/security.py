@@ -10,7 +10,7 @@ Features:
 
 import time
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, Any
 
 import httpx
 import jwt
@@ -61,7 +61,7 @@ async def fetch_jwks() -> dict:
         return _jwks_cache
 
 
-def get_signing_key(token: str, jwks: dict) -> str:
+def get_signing_key(token: str, jwks: dict) -> Any:
     """Get the signing key for the token from JWKS."""
     unverified_header = jwt.get_unverified_header(token)
     kid = unverified_header.get("kid")

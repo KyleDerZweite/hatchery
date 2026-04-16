@@ -30,7 +30,9 @@ def decrypt_panel_api_key(encrypted_api_key: str) -> str:
     try:
         return _fernet().decrypt(encrypted_api_key.encode("utf-8")).decode("utf-8")
     except InvalidToken as exc:
-        raise ValueError("Stored panel API key cannot be decrypted with the current secret.") from exc
+        raise ValueError(
+            "Stored panel API key cannot be decrypted with the current secret."
+        ) from exc
 
 
 async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionTestResult:

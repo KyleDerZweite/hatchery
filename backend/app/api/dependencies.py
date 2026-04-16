@@ -1,8 +1,12 @@
+from typing import TypeVar
+
 from fastapi import HTTPException, status
 
 from app.core import CurrentUser, SessionDep
 from app.models.egg import EggConfig, Visibility
 from app.models.panel import PanelInstance
+
+ModelT = TypeVar("ModelT", PanelInstance, EggConfig)
 
 
 class GenericFetcher:
@@ -10,12 +14,12 @@ class GenericFetcher:
 
     @staticmethod
     async def _fetch_and_validate_owner(
-        model,
+        model: type[ModelT],
         item_id: int,
         session: SessionDep,
         current_user: CurrentUser,
         allow_public: bool = False,
-    ):
+    ) -> ModelT:
         item = await session.get(model, item_id)
         if not item:
             raise HTTPException(

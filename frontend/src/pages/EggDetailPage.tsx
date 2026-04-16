@@ -102,7 +102,12 @@ export function EggDetailPage() {
 
   return (
     <div className="space-y-8">
-      <EditEggDialog egg={egg} open={isEditOpen} onOpenChange={setIsEditOpen} />
+      <EditEggDialog
+        key={`${egg.id}-${isEditOpen ? "open" : "closed"}`}
+        egg={egg}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+      />
       
       <div className="bg-card/50 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-success/10 flex items-center justify-between">
         <div className="flex items-center gap-4">
