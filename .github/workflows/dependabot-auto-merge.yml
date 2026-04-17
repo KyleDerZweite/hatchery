@@ -35,7 +35,9 @@ jobs:
               pull_number: prNumber,
             });
 
-            if (pr.user?.login !== "dependabot[bot]") {
+            const author = (pr.user?.login || "").toLowerCase();
+            const isDependabot = pr.user?.type === "Bot" && author.includes("dependabot");
+            if (!isDependabot) {
               core.info(`PR #${pr.number} is not authored by Dependabot.`);
               return;
             }
@@ -62,22 +64,13 @@ jobs:
             }
 
             try {
-              await github.graphql(
-                `
-                  mutation EnableAutoMerge($pullRequestId: ID!) {
-                    enablePullRequestAutoMerge(
-                      input: {
-                        pullRequestId: $pullRequestId
-                        mergeMethod: SQUASH
-                      }
-                    ) {
-                      clientMutationId
-                    }
-                  }
-                `,
-                { pullRequestId: pr.node_id },
-              );
-              core.info(`Enabled auto-merge for PR #${pr.number}.`);
+              await github.rest.pulls.merge({
+                owner,
+                repo,
+                pull_number: pr.number,
+                merge_method: "squash",
+              });
+              core.info(`Merged PR #${pr.number}.`);
             } catch (error) {
-              core.info(`Auto-merge step skipped: ${error.message}`);
+              core.info(`Merge step skipped: ${error.message}`);
             }
