@@ -8,9 +8,9 @@ Hatchery is a Modpack-to-Server Automation Platform that converts CurseForge and
 
 | Layer | Technology |
 |-------|------------|
-| Backend | Python 3.11+, FastAPI, SQLModel, Uvicorn |
-| Frontend | TypeScript, React 18, Vite 6, Tailwind CSS, TanStack Query |
-| Database | SQLite (default) or PostgreSQL |
+| Backend | Python 3.12+, FastAPI, SQLModel, Uvicorn |
+| Frontend | TypeScript, React 19, Vite, Tailwind CSS, TanStack Query |
+| Database | PostgreSQL (production), SQLite (local dev/tests only) |
 | Auth | Zitadel OIDC |
 | Containerization | Podman + Podman Compose |
 | Package Managers | uv (Python), pnpm (Node.js) |
@@ -39,8 +39,6 @@ hatchery/
 │   ├── package.json
 │   ├── pnpm-lock.yaml      # Node.js dependencies lock
 │   └── vite.config.ts
-├── morphic/                # ModMorphic project (planned merge)
-├── legacy/                 # Reference implementations (read-only)
 └── docker-compose.yml      # Podman Compose config
 ```
 
@@ -146,12 +144,18 @@ podman-compose down
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | Database connection string (default: sqlite) |
-| `ZITADEL_DOMAIN` | Zitadel OIDC provider domain |
-| `CORS_ORIGINS` | Allowed CORS origins |
-| `VITE_API_URL` | Backend URL for frontend |
-| `VITE_ZITADEL_AUTHORITY` | Zitadel authority URL |
+| `DATABASE_URL` | Database connection string (default: sqlite; postgres in compose) |
+| `SECRET_KEY` | Application secret (generate for production) |
+| `PANEL_API_KEY_ENCRYPTION_SECRET` | Fernet key source for stored panel API keys |
+| `CURSEFORGE_API_KEY` | Required for CurseForge modpack imports |
+| `ZITADEL_DOMAIN` | Zitadel OIDC provider domain (no scheme) |
+| `ZITADEL_PROJECT_ID` | JWT audience; auth rejects all tokens while unset |
+| `CORS_ORIGINS` | Allowed CORS origins (JSON list) |
+| `VITE_API_URL` | Backend URL for frontend (empty = relative `/api` via nginx) |
+| `VITE_ZITADEL_AUTHORITY` | Zitadel authority URL (with scheme) |
 | `VITE_ZITADEL_CLIENT_ID` | Zitadel client ID |
+| `VITE_ZITADEL_REDIRECT_URI` | OIDC redirect URI (`/callback`) |
+| `VITE_ZITADEL_POST_LOGOUT_URI` | Post-logout redirect URI |
 
 ## CI Pipeline
 

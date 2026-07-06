@@ -64,6 +64,10 @@ pnpm build
 
 1. `PANEL_API_KEY_ENCRYPTION_SECRET` is required for encrypted panel credentials.
 2. Do not change the encryption secret without planning a credential rotation.
+3. `ZITADEL_PROJECT_ID` is required: it is the JWT audience, and API auth
+   rejects every token while it is unset.
+4. The backend logs startup warnings when running non-debug with placeholder
+   secrets or an empty `ZITADEL_PROJECT_ID`.
 
 ## Pangolin
 
