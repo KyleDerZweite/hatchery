@@ -45,12 +45,12 @@ class User:
         return self.has_role("ADMIN")
 
 
-async def fetch_jwks() -> dict:
+async def fetch_jwks(force_refresh: bool = False) -> dict:
     """Fetch JWKS from Zitadel (cached)."""
     global _jwks_cache, _jwks_cache_time
 
     now = time.time()
-    if _jwks_cache and (now - _jwks_cache_time) < JWKS_CACHE_TTL:
+    if not force_refresh and _jwks_cache and (now - _jwks_cache_time) < JWKS_CACHE_TTL:
         return _jwks_cache
 
     async with httpx.AsyncClient() as client:
@@ -61,8 +61,8 @@ async def fetch_jwks() -> dict:
         return _jwks_cache
 
 
-def get_signing_key(token: str, jwks: dict) -> Any:
-    """Get the signing key for the token from JWKS."""
+def find_signing_key(token: str, jwks: dict) -> Any | None:
+    """Get the signing key for the token from JWKS, or None if the kid is unknown."""
     unverified_header = jwt.get_unverified_header(token)
     kid = unverified_header.get("kid")
 
@@ -70,10 +70,7 @@ def get_signing_key(token: str, jwks: dict) -> Any:
         if key.get("kid") == kid:
             return jwt.algorithms.RSAAlgorithm.from_jwk(key)
 
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Unable to find signing key",
-    )
+    return None
 
 
 def extract_roles(claims: dict) -> list[str]:
@@ -105,9 +102,18 @@ async def get_current_user(
     token = credentials.credentials
 
     try:
-        # Fetch JWKS and get signing key
+        # Fetch JWKS and get signing key; refetch once on an unknown kid so
+        # tokens signed after a key rotation are not rejected for the cache TTL.
         jwks = await fetch_jwks()
-        signing_key = get_signing_key(token, jwks)
+        signing_key = find_signing_key(token, jwks)
+        if signing_key is None:
+            jwks = await fetch_jwks(force_refresh=True)
+            signing_key = find_signing_key(token, jwks)
+        if signing_key is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unable to find signing key",
+            )
 
         # Decode and verify token
         claims = jwt.decode(
@@ -116,6 +122,7 @@ async def get_current_user(
             algorithms=["RS256"],
             issuer=settings.zitadel_issuer,
             audience=settings.zitadel_project_id,
+            options={"require": ["exp"]},
         )
 
         return User(

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -7,12 +8,38 @@ from sqlalchemy import text
 from app.api import api_router
 from app.core import SessionDep, settings
 from app.core.db import init_db
+from app.services import modpack_service
+
+logger = structlog.get_logger()
+
+_PLACEHOLDER_SECRETS = {"", "change-me", "change-me-in-production"}
+
+
+def _warn_insecure_settings() -> None:
+    if settings.debug:
+        return
+    if settings.secret_key in _PLACEHOLDER_SECRETS:
+        logger.warning("insecure_default_secret", setting="SECRET_KEY")
+    if settings.panel_api_key_encryption_secret in _PLACEHOLDER_SECRETS:
+        logger.warning(
+            "insecure_default_secret",
+            setting="PANEL_API_KEY_ENCRYPTION_SECRET",
+            detail="Stored panel API keys are encrypted with a publicly known key.",
+        )
+    if not settings.zitadel_project_id:
+        logger.warning(
+            "zitadel_project_id_unset",
+            detail="Token audience validation will reject every login until "
+            "ZITADEL_PROJECT_ID is configured.",
+        )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _warn_insecure_settings()
     await init_db()
     yield
+    await modpack_service.close()
 
 
 app = FastAPI(

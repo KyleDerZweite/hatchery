@@ -17,16 +17,20 @@ def upgrade() -> None:
         sa.Column("owner_id", sa.String(), nullable=False),
         sa.Column("name", sa.String(length=200), nullable=False),
         sa.Column("source_url", sa.String(length=1000), nullable=False),
-        sa.Column("source", sa.String(length=10), nullable=False),
+        sa.Column(
+            "source",
+            sa.Enum("CURSEFORGE", "MODRINTH", "UNKNOWN", name="modpacksource"),
+            nullable=False,
+        ),
         sa.Column("description", sa.String(length=2000), nullable=True),
         sa.Column("java_version", sa.Integer(), nullable=False),
-        sa.Column("visibility", sa.String(length=7), nullable=False),
+        sa.Column("visibility", sa.Enum("PUBLIC", "PRIVATE", name="visibility"), nullable=False),
         sa.Column("minecraft_version", sa.String(length=20), nullable=True),
         sa.Column("modloader", sa.String(length=50), nullable=True),
         sa.Column("modloader_version", sa.String(length=50), nullable=True),
         sa.Column("json_data", sa.JSON(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_egg_configs_owner_id"), "egg_configs", ["owner_id"], unique=False)
@@ -40,9 +44,9 @@ def upgrade() -> None:
         sa.Column("url", sa.String(length=500), nullable=False),
         sa.Column("description", sa.String(length=500), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(), nullable=False),
-        sa.Column("last_tested_at", sa.DateTime(), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("last_tested_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("last_test_status", sa.String(length=32), nullable=False),
         sa.Column("last_test_message", sa.String(length=500), nullable=False),
         sa.PrimaryKeyConstraint("id"),
@@ -60,3 +64,6 @@ def downgrade() -> None:
     op.drop_table("panel_instances")
     op.drop_index(op.f("ix_egg_configs_owner_id"), table_name="egg_configs")
     op.drop_table("egg_configs")
+    # Native enum types are not dropped with the table on PostgreSQL
+    sa.Enum(name="modpacksource").drop(op.get_bind(), checkfirst=True)
+    sa.Enum(name="visibility").drop(op.get_bind(), checkfirst=True)

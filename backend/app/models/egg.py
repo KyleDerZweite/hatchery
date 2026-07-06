@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import JSON
+from sqlalchemy import JSON, DateTime
 from sqlmodel import Column, Field, SQLModel
 
 
@@ -44,11 +44,17 @@ class EggConfig(EggConfigBase, table=True):
     owner_id: str = Field(index=True)  # Zitadel subject (unique user ID)
 
     # The actual Pterodactyl egg JSON structure
-    json_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    json_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))
 
-    # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # Metadata (timezone-aware; asyncpg rejects aware datetimes on naive columns)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
 
 
 class EggConfigCreate(SQLModel):

@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 from typing import Literal
 
-from sqlmodel import Field, SQLModel
+from sqlalchemy import DateTime
+from sqlmodel import Column, Field, SQLModel
 
 
 class PanelInstanceBase(SQLModel):
@@ -17,9 +18,17 @@ class PanelInstance(PanelInstanceBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
     api_key_encrypted: str = Field(max_length=4096)
     owner_id: str = Field(index=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    last_tested_at: datetime | None = Field(default=None)
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    last_tested_at: datetime | None = Field(
+        default=None, sa_column=Column(DateTime(timezone=True), nullable=True)
+    )
     last_test_status: str = Field(default="untested", max_length=32)
     last_test_message: str = Field(default="", max_length=500)
 

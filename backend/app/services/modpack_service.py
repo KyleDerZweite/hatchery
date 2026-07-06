@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import HTTPException, status
@@ -119,6 +120,15 @@ class ModpackService:
         Returns:
             ModpackInfo with fetched metadata
         """
+        # The patterns below use re.search, so require a real http(s) URL up front
+        # to keep e.g. "javascript:...modrinth.com/modpack/x" out of stored source URLs.
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unsupported modpack URL. Use a Modrinth or CurseForge modpack URL.",
+            )
+
         source, slug, version_id = self.detect_source(url)
 
         if source == ModpackSource.MODRINTH and slug:
@@ -143,17 +153,23 @@ class ModpackService:
         try:
             # Fetch project info
             response = await self.http_client.get(f"{self.MODRINTH_API}/project/{slug}")
-            if response.status_code == 200:
-                data = response.json()
-                info.name = data.get("title", slug)
-                info.project_id = data.get("id", "")
-                info.description = data.get("description", "")
-                info.icon_url = data.get("icon_url")
+            if response.status_code == 404:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Modpack '{slug}' was not found on Modrinth.",
+                )
+            response.raise_for_status()
+            data = response.json()
+            info.name = data.get("title", slug)
+            info.project_id = data.get("id", "")
+            info.description = data.get("description", "")
+            info.icon_url = data.get("icon_url")
 
             # Fetch versions to get loader/minecraft info
             versions_response = await self.http_client.get(
                 f"{self.MODRINTH_API}/project/{slug}/version"
             )
+            versions_response.raise_for_status()
             if versions_response.status_code == 200:
                 versions = versions_response.json()
                 if versions:
@@ -184,12 +200,13 @@ class ModpackService:
                     loaders = version.get("loaders", [])
                     if loaders:
                         loader = loaders[0].lower()
+                        # "neoforge" must be checked before "forge" (substring match)
                         if "fabric" in loader:
                             info.modloader = ModpackType.FABRIC
-                        elif "forge" in loader:
-                            info.modloader = ModpackType.FORGE
                         elif "neoforge" in loader:
                             info.modloader = ModpackType.NEOFORGE
+                        elif "forge" in loader:
+                            info.modloader = ModpackType.FORGE
                         elif "quilt" in loader:
                             info.modloader = ModpackType.QUILT
 
@@ -212,6 +229,8 @@ class ModpackService:
             # Detect Java version based on Minecraft version
             info.java_version = self._detect_java_version(info.minecraft_version)
 
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -249,9 +268,15 @@ class ModpackService:
                 headers=headers,
             )
 
+            search_response.raise_for_status()
             if search_response.status_code == 200:
                 search_data = search_response.json()
                 mods = search_data.get("data", [])
+                if not mods:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"Modpack '{slug}' was not found on CurseForge.",
+                    )
                 if mods:
                     mod = mods[0]
                     info.project_id = str(mod.get("id", ""))
@@ -308,6 +333,8 @@ class ModpackService:
             # Detect Java version
             info.java_version = self._detect_java_version(info.minecraft_version)
 
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,

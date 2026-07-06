@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import httpx
 import structlog
@@ -36,6 +36,15 @@ def decrypt_panel_api_key(encrypted_api_key: str) -> str:
 
 
 async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionTestResult:
+    parsed = urlparse(base_url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return PanelConnectionTestResult(
+            success=False,
+            status="failed",
+            message="The panel URL must be a valid http:// or https:// URL.",
+            checked_endpoint=base_url,
+        )
+
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Accept": PANEL_ACCEPT_HEADER,
@@ -43,10 +52,12 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
     }
     normalized_url = base_url.rstrip("/")
 
+    # Redirects are not followed so the bearer token cannot be replayed to
+    # an attacker-chosen host via a 3xx response.
     async with httpx.AsyncClient(
         headers=headers,
         timeout=settings.panel_api_timeout_seconds,
-        follow_redirects=True,
+        follow_redirects=False,
     ) as client:
         for path in PANEL_CHECK_PATHS:
             endpoint = urljoin(f"{normalized_url}/", path.lstrip("/"))
@@ -68,6 +79,21 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
                     status="ok",
                     message="The panel application API is reachable with the provided key.",
                     panel_type=_detect_panel_type(response),
+                    checked_endpoint=endpoint,
+                )
+            if response.is_redirect:
+                location = response.headers.get("location", "")
+                logger.info(
+                    "panel_connection_redirected",
+                    url=normalized_url,
+                    endpoint=endpoint,
+                    location=location,
+                )
+                return PanelConnectionTestResult(
+                    success=False,
+                    status="failed",
+                    message="The panel URL redirected. Use the panel's canonical URL "
+                    "(for example, https:// instead of http://).",
                     checked_endpoint=endpoint,
                 )
             if response.status_code in {401, 403}:

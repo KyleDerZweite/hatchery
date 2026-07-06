@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     panel_api_key_encryption_secret: str = "change-me"
     panel_api_timeout_seconds: float = 10.0
 
-    zitadel_domain: str = "auth.kylehub.dev"
+    zitadel_domain: str = "auth.example.com"
     zitadel_project_id: str = ""
 
     @property
