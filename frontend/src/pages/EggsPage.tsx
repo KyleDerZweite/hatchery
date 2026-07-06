@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
 import { EggConfig, EggCreateData, eggsApi } from "@/lib/api";
+import { openExternalUrl } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
@@ -252,7 +253,7 @@ export function EggsPage() {
                     size="sm"
                     variant="ghost"
                     className="hover:bg-primary/10 hover:text-primary"
-                    onClick={() => window.open(egg.source_url, "_blank")}
+                    onClick={() => openExternalUrl(egg.source_url)}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>

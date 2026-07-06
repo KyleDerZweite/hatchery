@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { AuthCallback, useAuth } from "./lib/auth";
@@ -11,20 +12,24 @@ import { SettingsPage } from "./pages/SettingsPage";
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, login } = useAuth();
   const location = useLocation();
+  // Guard so signinRedirect fires once, not on every re-render while unauthenticated
+  const redirecting = useRef(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && !redirecting.current) {
+      redirecting.current = true;
+      // Store the intended destination for redirect after login
+      sessionStorage.setItem("auth_redirect", location.pathname);
+      login();
+    }
+  });
+
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    // Store the intended destination for redirect after login
-    sessionStorage.setItem("auth_redirect", location.pathname);
-    login();
-    return null;
   }
 
   return <>{children}</>;

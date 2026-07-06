@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from '@/components/ui/use-toast'
 import { eggsApi } from '@/lib/api'
+import { openExternalUrl } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
@@ -27,6 +28,7 @@ export function EggDetailPage() {
     mutationFn: () => eggsApi.regenerate(parseInt(id!)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['egg', id] })
+      queryClient.invalidateQueries({ queryKey: ['eggs'] })
       toast({
         title: 'Egg regenerated',
         description: 'The egg configuration has been updated.',
@@ -126,7 +128,7 @@ export function EggDetailPage() {
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
-            onClick={() => window.open(egg.source_url, '_blank')}
+            onClick={() => openExternalUrl(egg.source_url)}
             className="bg-black/20 border-white/10 text-white hover:bg-black/40 hover:text-white border-none"
           >
             <ExternalLink className="mr-2 h-4 w-4" />

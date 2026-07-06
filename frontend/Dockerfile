@@ -1,13 +1,14 @@
 # Build stage
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9 --activate
+# Install pnpm (version matches the packageManager field in package.json)
+RUN corepack enable && corepack prepare pnpm@10.29.2 --activate
 
-# Accept build arg for API URL
-ARG VITE_API_URL=http://localhost:8000
+# Accept build arg for API URL.
+# Empty default = relative /api, proxied to the backend by nginx.
+ARG VITE_API_URL=
 ENV VITE_API_URL=$VITE_API_URL
 ARG VITE_ZITADEL_AUTHORITY=
 ENV VITE_ZITADEL_AUTHORITY=$VITE_ZITADEL_AUTHORITY

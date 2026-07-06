@@ -24,6 +24,7 @@ import {
   PanelInstance,
   panelsApi,
 } from "@/lib/api";
+import { openExternalUrl } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import {
@@ -286,7 +287,7 @@ export function PanelsPage() {
                     size="sm"
                     variant="ghost"
                     className="hover:bg-primary/10 hover:text-primary"
-                    onClick={() => window.open(panel.url, "_blank")}
+                    onClick={() => openExternalUrl(panel.url)}
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
