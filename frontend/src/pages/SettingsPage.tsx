@@ -15,7 +15,7 @@ export function SettingsPage() {
         <p className="text-muted-foreground">Manage your account and application preferences</p>
       </div>
 
-      <Card className="card-vine">
+      <Card>
         <CardHeader>
           <CardTitle>Profile</CardTitle>
           <CardDescription>

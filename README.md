@@ -34,6 +34,9 @@ podman-compose up -d
 
 4. Open `http://localhost:3000`.
 
+Production setup, Zitadel configuration, backup/restore, and upgrade procedures
+are documented in [OPERATIONS.md](./OPERATIONS.md).
+
 ## Services
 
 1. `frontend`: static app served by Nginx

@@ -148,7 +148,7 @@ export function PanelsPage() {
               <DialogHeader>
                 <DialogTitle>Add Panel Instance</DialogTitle>
                 <DialogDescription>
-                  Connect a Pterodactyl or Pelican panel to deploy eggs.
+                  Save a Pterodactyl or Pelican panel and verify its application API.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -225,12 +225,12 @@ export function PanelsPage() {
       {isLoading ? (
         <div className="text-center py-8">Loading panels...</div>
       ) : panels.length === 0 ? (
-        <Card className="card-vine">
+        <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Server className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No panels connected</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Add a Pterodactyl or Pelican panel to start deploying eggs.
+              Add a Pterodactyl or Pelican panel to verify API compatibility.
             </p>
             <Button onClick={() => setIsDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -241,7 +241,7 @@ export function PanelsPage() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {panels.map((panel: PanelInstance) => (
-            <Card key={panel.id} className="card-vine transition-all hover:border-primary/30">
+            <Card key={panel.id} className="transition-all hover:border-primary/30">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>

@@ -55,6 +55,8 @@ export function EggsPage() {
       queryClient.invalidateQueries({ queryKey: ["eggs"] });
       setIsDialogOpen(false);
       setSourceUrl("");
+      setVisibility("private");
+      setJavaVersion("17");
       toast({
         title: "Egg created!",
         description: "Your egg configuration has been generated.",
@@ -213,7 +215,7 @@ export function EggsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {eggs.map((egg: EggConfig) => (
-            <Card key={egg.id} className="card-vine transition-all hover:border-primary/30">
+            <Card key={egg.id} className="transition-all hover:border-primary/30">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>

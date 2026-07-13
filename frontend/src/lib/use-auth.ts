@@ -1,4 +1,5 @@
 import { useAuth as useOidcAuth } from "react-oidc-context";
+import { openExternalUrl } from "./utils";
 
 /**
  * User profile from Zitadel ID token
@@ -63,7 +64,7 @@ export function useAuth() {
 
     // Open Zitadel account settings in new tab
     const openSettings = (): void => {
-        window.open(`${authority}/ui/console/users/me`, "_blank");
+        openExternalUrl(`${authority}/ui/console/users/me`);
     };
 
     // Build a compatible user object

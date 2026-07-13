@@ -1,13 +1,34 @@
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Layout } from "./components/layout/Layout";
 import { AuthCallback, useAuth } from "./lib/auth";
-import { DashboardPage } from "./pages/DashboardPage";
-import { EggDetailPage } from "./pages/EggDetailPage";
-import { EggsPage } from "./pages/EggsPage";
-import { LoginPage } from "./pages/LoginPage";
-import { PanelsPage } from "./pages/PanelsPage";
-import { SettingsPage } from "./pages/SettingsPage";
+
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })),
+);
+const EggDetailPage = lazy(() =>
+  import("./pages/EggDetailPage").then((module) => ({ default: module.EggDetailPage })),
+);
+const EggsPage = lazy(() =>
+  import("./pages/EggsPage").then((module) => ({ default: module.EggsPage })),
+);
+const LoginPage = lazy(() =>
+  import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })),
+);
+const PanelsPage = lazy(() =>
+  import("./pages/PanelsPage").then((module) => ({ default: module.PanelsPage })),
+);
+const SettingsPage = lazy(() =>
+  import("./pages/SettingsPage").then((module) => ({ default: module.SettingsPage })),
+);
+
+function PageLoader() {
+  return (
+    <div className="flex h-screen items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    </div>
+  );
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, login } = useAuth();
@@ -55,7 +76,8 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <Routes>
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
       <Route path="/callback" element={<AuthCallback />} />
 
       <Route
@@ -84,7 +106,8 @@ function App() {
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }
 

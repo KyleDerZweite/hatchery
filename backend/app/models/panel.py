@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 from typing import Literal
+from urllib.parse import urlparse
 
+from pydantic import field_validator
 from sqlalchemy import DateTime
 from sqlmodel import Column, Field, SQLModel
 
@@ -39,6 +41,11 @@ class PanelInstanceCreate(SQLModel):
     api_key: str = Field(min_length=1)
     description: str | None = Field(default=None, max_length=500)
 
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        return _validated_panel_url(value)
+
 
 class PanelInstanceRead(PanelInstanceBase):
     id: int
@@ -58,6 +65,11 @@ class PanelInstanceUpdate(SQLModel):
     description: str | None = Field(default=None, max_length=500)
     is_active: bool | None = None
 
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str | None) -> str | None:
+        return _validated_panel_url(value) if value is not None else None
+
 
 class PanelConnectionTestResult(SQLModel):
     success: bool
@@ -65,3 +77,11 @@ class PanelConnectionTestResult(SQLModel):
     message: str
     panel_type: str | None = None
     checked_endpoint: str | None = None
+
+
+def _validated_panel_url(value: str) -> str:
+    normalized = value.rstrip("/")
+    parsed = urlparse(normalized)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("Panel URL must be a valid http:// or https:// URL")
+    return normalized

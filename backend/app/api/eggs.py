@@ -1,11 +1,12 @@
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
-from sqlmodel import or_, select
+from fastapi import APIRouter, Depends, Query, status
+from sqlmodel import col, or_, select
 
 from app.api.dependencies import get_egg_or_404_read, get_egg_or_404_write
 from app.core import CurrentUser, SessionDep
+from app.core.rate_limit import external_operation_limiter
 from app.models import (
     EggConfig,
     EggConfigCreate,
@@ -35,6 +36,8 @@ async def create_egg_from_url(
     3. Generates Pterodactyl egg JSON
     4. Saves the configuration
     """
+    await external_operation_limiter.check(f"egg:{current_user.id}")
+
     # Fetch modpack info from URL
     modpack_info = await modpack_service.fetch_modpack_info(egg_data.source_url)
 
@@ -72,8 +75,8 @@ async def create_egg_from_url(
 async def list_eggs(
     current_user: CurrentUser,
     session: SessionDep,
-    skip: int = 0,
-    limit: int = 100,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
     visibility: Visibility | None = None,
 ):
     """
@@ -93,7 +96,7 @@ async def list_eggs(
     if visibility:
         query = query.where(EggConfig.visibility == visibility)
 
-    query = query.offset(skip).limit(limit)
+    query = query.order_by(col(EggConfig.created_at).desc()).offset(skip).limit(limit)
     result = await session.execute(query)
 
     return result.scalars().all()
@@ -181,6 +184,8 @@ async def regenerate_egg(
     Useful if the modpack has been updated or the egg generation logic has changed.
     """
 
+    await external_operation_limiter.check(f"egg:{current_user.id}")
+
     # Re-fetch modpack info
     modpack_info = await modpack_service.fetch_modpack_info(egg.source_url)
 
@@ -191,6 +196,12 @@ async def regenerate_egg(
 
     # Update egg
     egg.json_data = egg_json
+    egg.name = modpack_info.name
+    egg.description = modpack_info.description
+    egg.source = modpack_info.source
+    egg.minecraft_version = modpack_info.minecraft_version
+    egg.modloader = modpack_info.modloader
+    egg.modloader_version = modpack_info.modloader_version
     egg.updated_at = datetime.now(UTC)
 
     session.add(egg)

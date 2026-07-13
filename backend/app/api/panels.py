@@ -1,10 +1,12 @@
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
-from sqlmodel import select
+from fastapi import APIRouter, Depends, Query, status
+from sqlmodel import col, select
 
 from app.api.dependencies import get_panel_or_404
 from app.core import CurrentUser, SessionDep
+from app.core.rate_limit import external_operation_limiter
 from app.models import (
     PanelConnectionTestResult,
     PanelInstance,
@@ -48,19 +50,25 @@ async def create_panel(
 async def list_panels(
     current_user: CurrentUser,
     session: SessionDep,
-    skip: int = 0,
-    limit: int = 100,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=100)] = 100,
 ):
     """
     List panel instances.
     Admins see all panels; users see only their own.
     """
     if current_user.is_admin:
-        result = await session.execute(select(PanelInstance).offset(skip).limit(limit))
+        result = await session.execute(
+            select(PanelInstance)
+            .order_by(col(PanelInstance.created_at).desc())
+            .offset(skip)
+            .limit(limit)
+        )
     else:
         result = await session.execute(
             select(PanelInstance)
             .where(PanelInstance.owner_id == current_user.id)
+            .order_by(col(PanelInstance.created_at).desc())
             .offset(skip)
             .limit(limit)
         )
@@ -109,8 +117,10 @@ async def delete_panel(
 @router.post("/{panel_id}/test", response_model=PanelConnectionTestResult)
 async def test_panel_connection(
     session: SessionDep,
+    current_user: CurrentUser,
     panel: PanelInstance = Depends(get_panel_or_404),
 ):
+    await external_operation_limiter.check(f"panel:{current_user.id}")
     result = await run_panel_connection_test(
         base_url=panel.url,
         api_key=decrypt_panel_api_key(panel.api_key_encrypted),

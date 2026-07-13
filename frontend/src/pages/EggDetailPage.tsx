@@ -144,15 +144,17 @@ export function EggDetailPage() {
               Edit
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            onClick={() => regenerateMutation.mutate()} 
-            disabled={regenerateMutation.isPending}
-            className="bg-black/20 border-white/10 text-white hover:bg-black/40 hover:text-white border-none"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Regenerate
-          </Button>
+          {(user?.id === egg.owner_id || user?.role === 'admin') && (
+            <Button
+              variant="outline"
+              onClick={() => regenerateMutation.mutate()}
+              disabled={regenerateMutation.isPending}
+              className="bg-black/20 border-white/10 text-white hover:bg-black/40 hover:text-white border-none"
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Regenerate
+            </Button>
+          )}
           <Button 
             onClick={handleExport}
             className="bg-primary hover:bg-primary/90 text-white border-none shadow-lg"
@@ -164,7 +166,7 @@ export function EggDetailPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="card-vine">
+        <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Minecraft Version</CardTitle>
           </CardHeader>
@@ -172,7 +174,7 @@ export function EggDetailPage() {
             <p className="text-2xl font-bold">{egg.minecraft_version || 'Unknown'}</p>
           </CardContent>
         </Card>
-        <Card className="card-vine">
+        <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Modloader</CardTitle>
           </CardHeader>
@@ -185,7 +187,7 @@ export function EggDetailPage() {
             )}
           </CardContent>
         </Card>
-        <Card className="card-vine">
+        <Card>
           <CardHeader>
             <CardTitle className="text-sm font-medium text-muted-foreground">Java Version</CardTitle>
           </CardHeader>
@@ -195,7 +197,7 @@ export function EggDetailPage() {
         </Card>
       </div>
 
-      <Card className="card-vine">
+      <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -218,7 +220,7 @@ export function EggDetailPage() {
       </Card>
 
       {egg.description && (
-        <Card className="card-vine">
+        <Card>
           <CardHeader>
             <CardTitle>Description</CardTitle>
           </CardHeader>

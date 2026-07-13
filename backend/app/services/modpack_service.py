@@ -8,6 +8,7 @@ This service handles:
 """
 
 import re
+import shlex
 from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -59,12 +60,12 @@ class ModpackService:
 
     # URL patterns for different platforms
     CURSEFORGE_PATTERNS = [
-        r"curseforge\.com/minecraft/modpacks/([a-zA-Z0-9-]+)(?:/files/(\d+))?",
+        r"(?:www\.)?curseforge\.com/minecraft/modpacks/([a-zA-Z0-9-]+)(?:/files/(\d+))?",
         r"legacy\.curseforge\.com/minecraft/modpacks/([a-zA-Z0-9-]+)(?:/files/(\d+))?",
     ]
 
     MODRINTH_PATTERNS = [
-        r"modrinth\.com/modpack/([a-zA-Z0-9-]+)(?:/version/([a-zA-Z0-9]+))?",
+        r"(?:www\.)?modrinth\.com/modpack/([a-zA-Z0-9-]+)(?:/version/([a-zA-Z0-9._-]+))?",
     ]
 
     # Modrinth API base URL
@@ -90,20 +91,25 @@ class ModpackService:
         Returns:
             Tuple of (source platform, slug/id, optional version/file id)
         """
-        for pattern in self.CURSEFORGE_PATTERNS:
-            match = re.search(pattern, url)
-            if match:
-                return (
-                    ModpackSource.CURSEFORGE,
-                    match.group(1),
-                    match.group(2) if len(match.groups()) > 1 else None,
-                )
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower()
+        path = parsed.path.rstrip("/")
 
-        for pattern in self.MODRINTH_PATTERNS:
-            match = re.search(pattern, url)
+        if host in {"www.curseforge.com", "curseforge.com", "legacy.curseforge.com"}:
+            patterns = self.CURSEFORGE_PATTERNS
+        elif host in {"www.modrinth.com", "modrinth.com"}:
+            patterns = self.MODRINTH_PATTERNS
+        else:
+            return ModpackSource.UNKNOWN, None, None
+
+        for pattern in patterns:
+            match = re.fullmatch(pattern, f"{host}{path}")
             if match:
+                source = (
+                    ModpackSource.CURSEFORGE if "curseforge" in host else ModpackSource.MODRINTH
+                )
                 return (
-                    ModpackSource.MODRINTH,
+                    source,
                     match.group(1),
                     match.group(2) if len(match.groups()) > 1 else None,
                 )
@@ -132,13 +138,32 @@ class ModpackService:
         source, slug, version_id = self.detect_source(url)
 
         if source == ModpackSource.MODRINTH and slug:
-            return await self._fetch_modrinth_info(slug, version_id, url)
+            info = await self._fetch_modrinth_info(slug, version_id, url)
+            self._validate_pack_info(info)
+            return info
         if source == ModpackSource.CURSEFORGE and slug:
-            return await self._fetch_curseforge_info(slug, version_id, url)
+            info = await self._fetch_curseforge_info(slug, version_id, url)
+            self._validate_pack_info(info)
+            return info
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Unsupported modpack URL. Use a Modrinth or CurseForge modpack URL.",
         )
+
+    @staticmethod
+    def _validate_pack_info(info: ModpackInfo) -> None:
+        missing = []
+        if not info.minecraft_version:
+            missing.append("Minecraft version")
+        if not info.modloader:
+            missing.append("supported mod loader")
+        if not info.download_url:
+            missing.append("downloadable pack file")
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail=f"The selected pack does not provide a {', '.join(missing)}.",
+            )
 
     async def _fetch_modrinth_info(
         self, slug: str, version_id: str | None, url: str
@@ -185,6 +210,11 @@ class ModpackService:
                             ),
                             None,
                         )
+                    if version_id and not version:
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Version '{version_id}' was not found for Modrinth modpack '{slug}'.",
+                        )
                     if not version:
                         version = versions[0]  # Latest version
 
@@ -215,16 +245,6 @@ class ModpackService:
                     if files:
                         primary_file = next((f for f in files if f.get("primary")), files[0])
                         info.download_url = primary_file.get("url")
-
-                    # Get dependencies for loader version
-                    deps = version.get("dependencies", [])
-                    for dep in deps:
-                        dep_id = dep.get("project_id", "")
-                        if dep_id in ["P7dR8mSH", "fabric-api"]:  # Fabric API
-                            continue
-                        version_id = dep.get("version_id")
-                        if version_id and info.modloader:
-                            info.modloader_version = version_id
 
             # Detect Java version based on Minecraft version
             info.java_version = self._detect_java_version(info.minecraft_version)
@@ -292,17 +312,26 @@ class ModpackService:
                     if authors:
                         info.author = authors[0].get("name")
 
-                    # Get latest file info
+                    # Get latest file info. A file-specific URL can point to an
+                    # older file that is not present in the search result's latestFiles.
                     latest_files = mod.get("latestFiles", [])
-                    if latest_files:
-                        target_file = None
-                        if file_id:
-                            target_file = next(
-                                (f for f in latest_files if str(f.get("id")) == file_id), None
+                    target_file = None
+                    if file_id:
+                        file_response = await self.http_client.get(
+                            f"{self.CURSEFORGE_API}/mods/{info.project_id}/files/{file_id}",
+                            headers=headers,
+                        )
+                        if file_response.status_code == 404:
+                            raise HTTPException(
+                                status_code=status.HTTP_404_NOT_FOUND,
+                                detail=f"File '{file_id}' was not found for CurseForge modpack '{slug}'.",
                             )
-                        if not target_file:
-                            target_file = latest_files[0]
+                        file_response.raise_for_status()
+                        target_file = file_response.json().get("data")
+                    elif latest_files:
+                        target_file = latest_files[0]
 
+                    if target_file:
                         info.file_id = str(target_file.get("id", ""))
                         info.download_url = target_file.get("downloadUrl")
 
@@ -483,7 +512,15 @@ class ModpackService:
         else:
             jvm_flags = "-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:MaxGCPauseMillis=100 -XX:+DisableExplicitGC -XX:TargetSurvivorRatio=90 -XX:G1NewSizePercent=50 -XX:G1MaxNewSizePercent=80 -XX:G1HeapWastePercent=5 -XX:+UseStringDeduplication"
 
-        return f"java {memory_flags} {jvm_flags} -jar {{{{SERVER_JARFILE}}}}"
+        java_command = f"java {memory_flags} {jvm_flags} -jar {{{{SERVER_JARFILE}}}}"
+        if modloader in {ModpackType.FORGE, ModpackType.NEOFORGE}:
+            return f"if [[ -f run.sh ]]; then bash run.sh nogui; else {java_command}; fi"
+        return java_command
+
+    @staticmethod
+    def _shell_comment(value: str) -> str:
+        """Keep remote metadata on one harmless shell-comment line."""
+        return " ".join(value.splitlines())
 
     def _get_install_script(self, modpack_info: ModpackInfo, modloader: ModpackType) -> str:
         """Get the installation script for the egg."""
@@ -503,14 +540,125 @@ class ModpackService:
 
         return script
 
+    def _get_modpack_files_script(self, info: ModpackInfo) -> str:
+        """Install the actual pack files, not only the archive overrides."""
+        if info.source == ModpackSource.MODRINTH:
+            return """
+# Install server-compatible files declared by the Modrinth pack index.
+if [[ -n "${MODPACK_URL}" ]]; then
+    echo "Downloading Modrinth pack..."
+    if [[ ! -d modpack_temp ]]; then
+        curl --fail --location --silent --show-error -o modpack.zip "${MODPACK_URL}"
+        unzip -q -o modpack.zip -d modpack_temp
+    fi
+    INDEX=modpack_temp/modrinth.index.json
+    if [[ ! -f "$INDEX" ]]; then
+        echo "The downloaded file is not a valid Modrinth pack (missing modrinth.index.json)."
+        exit 1
+    fi
+
+    jq -r '.files[] | select(.env.server != "unsupported") | [.path, .downloads[0]] | @tsv' "$INDEX" |
+    while IFS=$'\t' read -r path download_url; do
+        [[ -n "$path" && -n "$download_url" ]] || continue
+        case "$path" in
+            /*|../*|*/../*|*/..) echo "Unsafe path in Modrinth pack: $path"; exit 1 ;;
+        esac
+        mkdir -p "$(dirname "$path")"
+        echo "Downloading $path"
+        curl --fail --location --silent --show-error -o "$path" "$download_url"
+    done
+
+    for overrides in overrides server-overrides; do
+        if [[ -d "modpack_temp/$overrides" ]]; then
+            cp -a "modpack_temp/$overrides/." ./
+        fi
+    done
+    rm -rf modpack.zip modpack_temp
+fi
+"""
+
+        if info.source == ModpackSource.CURSEFORGE:
+            return """
+# Resolve the project/file pairs declared by the CurseForge manifest.
+if [[ -n "${MODPACK_URL}" ]]; then
+    if [[ -z "${CF_API_KEY}" ]]; then
+        echo "CF_API_KEY is required to install a CurseForge pack."
+        exit 1
+    fi
+    echo "Downloading CurseForge pack..."
+    if [[ ! -d modpack_temp ]]; then
+        curl --fail --location --silent --show-error -o modpack.zip "${MODPACK_URL}"
+        unzip -q -o modpack.zip -d modpack_temp
+    fi
+    MANIFEST=modpack_temp/manifest.json
+    if [[ ! -f "$MANIFEST" ]]; then
+        echo "The downloaded file is not a valid CurseForge pack (missing manifest.json)."
+        exit 1
+    fi
+
+    jq -r '.files[] | [.projectID, .fileID] | @tsv' "$MANIFEST" |
+    while IFS=$'\t' read -r project_id file_id; do
+        metadata=$(curl --fail --silent --show-error \
+            -H "x-api-key: ${CF_API_KEY}" \
+            "https://api.curseforge.com/v1/mods/$project_id/files/$file_id")
+        filename=$(jq -r '.data.fileName // empty' <<< "$metadata")
+        download_url=$(jq -r '.data.downloadUrl // empty' <<< "$metadata")
+        if [[ -z "$filename" || -z "$download_url" ]]; then
+            echo "CurseForge file $project_id/$file_id cannot be automatically downloaded."
+            exit 1
+        fi
+        case "$filename" in
+            */*|..|.|"") echo "Unsafe filename from CurseForge: $filename"; exit 1 ;;
+        esac
+        echo "Downloading mods/$filename"
+        curl --fail --location --silent --show-error -o "mods/$filename" "$download_url"
+    done
+
+    if [[ -d modpack_temp/overrides ]]; then
+        cp -a modpack_temp/overrides/. ./
+    fi
+    rm -rf modpack.zip modpack_temp
+fi
+"""
+
+        return ""
+
+    def _get_modpack_prepare_script(self) -> str:
+        """Download the pack and read exact loader versions before installation."""
+        return """
+if [[ -n "${MODPACK_URL}" ]]; then
+    curl --fail --location --silent --show-error -o modpack.zip "${MODPACK_URL}"
+    unzip -q -o modpack.zip -d modpack_temp
+
+    if [[ -f modpack_temp/modrinth.index.json ]]; then
+        INDEX=modpack_temp/modrinth.index.json
+        FABRIC_VERSION=$(jq -r '.dependencies["fabric-loader"] // empty' "$INDEX")
+        FORGE_VERSION=$(jq -r '.dependencies.forge // empty' "$INDEX")
+        NEOFORGE_VERSION=$(jq -r '.dependencies.neoforge // empty' "$INDEX")
+        QUILT_VERSION=$(jq -r '.dependencies["quilt-loader"] // empty' "$INDEX")
+    elif [[ -f modpack_temp/manifest.json ]]; then
+        loader_id=$(jq -r '.minecraft.modLoaders[] | select(.primary == true) | .id' \
+            modpack_temp/manifest.json | head -n1)
+        case "$loader_id" in
+            fabric-*) FABRIC_VERSION="${loader_id#fabric-}" ;;
+            forge-*) FORGE_VERSION="${loader_id#forge-}" ;;
+            neoforge-*) NEOFORGE_VERSION="${loader_id#neoforge-}" ;;
+            quilt-*) QUILT_VERSION="${loader_id#quilt-}" ;;
+        esac
+    fi
+fi
+"""
+
     def _get_fabric_install_script(
         self, mc_version: str, loader_version: str, info: ModpackInfo
     ) -> str:
         """Generate Fabric server installation script."""
-        return f'''#!/bin/bash
+        return f"""#!/bin/bash
+set -euo pipefail
+
 # Fabric Server Installation Script - Generated by Hatchery
-# Modpack: {info.name}
-# Source: {info.source_url}
+# Modpack: {self._shell_comment(info.name)}
+# Source: {self._shell_comment(info.source_url)}
 
 cd /mnt/server || exit 1
 
@@ -520,13 +668,16 @@ echo "🧵 Installing Fabric server for Minecraft {mc_version}"
 apt-get update && apt-get install -y curl jq unzip
 
 # Clean up any existing files
-rm -rf mods/ config/ server.jar fabric-installer.jar
+rm -rf mods/ config/ modpack_temp/ server.jar fabric-installer.jar
 
 # Create necessary directories
 mkdir -p mods config logs
 
-MINECRAFT_VERSION="{mc_version}"
-FABRIC_VERSION="${{FABRIC_VERSION:-{loader_version}}}"
+{self._get_modpack_prepare_script()}
+
+MINECRAFT_VERSION={shlex.quote(mc_version)}
+FABRIC_VERSION="${{FABRIC_VERSION:-}}"
+[[ -n "$FABRIC_VERSION" ]] || FABRIC_VERSION={shlex.quote(loader_version)}
 
 if [[ "$FABRIC_VERSION" == "latest" ]]; then
     echo "⬇️ Fetching latest Fabric version..."
@@ -555,34 +706,24 @@ fi
 
 rm -f fabric-installer.jar
 
-# Download modpack if URL provided
-if [[ -n "${{MODPACK_URL}}" ]]; then
-    echo "📦 Downloading modpack..."
-    curl -o modpack.zip -sSL "${{MODPACK_URL}}"
-    if [[ -f modpack.zip ]]; then
-        unzip -o modpack.zip -d modpack_temp/
-        # Copy overrides
-        if [[ -d modpack_temp/overrides ]]; then
-            cp -r modpack_temp/overrides/* ./
-        fi
-        rm -rf modpack.zip modpack_temp/
-    fi
-fi
+{self._get_modpack_files_script(info)}
 
 # Accept EULA
 echo "eula=true" > eula.txt
 
 echo "✅ Fabric server installation completed!"
-'''
+"""
 
     def _get_forge_install_script(
         self, mc_version: str, loader_version: str, info: ModpackInfo
     ) -> str:
         """Generate Forge server installation script."""
-        return f'''#!/bin/bash
+        return f"""#!/bin/bash
+set -euo pipefail
+
 # Forge Server Installation Script - Generated by Hatchery
-# Modpack: {info.name}
-# Source: {info.source_url}
+# Modpack: {self._shell_comment(info.name)}
+# Source: {self._shell_comment(info.source_url)}
 
 cd /mnt/server || exit 1
 
@@ -592,13 +733,16 @@ echo "🔥 Installing Forge server for Minecraft {mc_version}"
 apt-get update && apt-get install -y curl jq unzip
 
 # Clean up any existing files
-rm -rf mods/ config/ server.jar forge-installer.jar
+rm -rf mods/ config/ modpack_temp/ server.jar forge-installer.jar
 
 # Create necessary directories
 mkdir -p mods config logs
 
-MINECRAFT_VERSION="{mc_version}"
-FORGE_VERSION="${{FORGE_VERSION:-{loader_version}}}"
+{self._get_modpack_prepare_script()}
+
+MINECRAFT_VERSION={shlex.quote(mc_version)}
+FORGE_VERSION="${{FORGE_VERSION:-}}"
+[[ -n "$FORGE_VERSION" ]] || FORGE_VERSION={shlex.quote(loader_version)}
 
 if [[ "$FORGE_VERSION" == "recommended" ]] || [[ "$FORGE_VERSION" == "latest" ]]; then
     echo "⬇️ Fetching Forge version info..."
@@ -627,34 +771,24 @@ fi
 
 rm -f forge-installer.jar
 
-# Download modpack if URL provided
-if [[ -n "${{MODPACK_URL}}" ]]; then
-    echo "📦 Downloading modpack..."
-    curl -o modpack.zip -sSL "${{MODPACK_URL}}"
-    if [[ -f modpack.zip ]]; then
-        unzip -o modpack.zip -d modpack_temp/
-        # Copy overrides
-        if [[ -d modpack_temp/overrides ]]; then
-            cp -r modpack_temp/overrides/* ./
-        fi
-        rm -rf modpack.zip modpack_temp/
-    fi
-fi
+{self._get_modpack_files_script(info)}
 
 # Accept EULA
 echo "eula=true" > eula.txt
 
 echo "✅ Forge server installation completed!"
-'''
+"""
 
     def _get_neoforge_install_script(
         self, mc_version: str, loader_version: str, info: ModpackInfo
     ) -> str:
         """Generate NeoForge server installation script."""
-        return f'''#!/bin/bash
+        return f"""#!/bin/bash
+set -euo pipefail
+
 # NeoForge Server Installation Script - Generated by Hatchery
-# Modpack: {info.name}
-# Source: {info.source_url}
+# Modpack: {self._shell_comment(info.name)}
+# Source: {self._shell_comment(info.source_url)}
 
 cd /mnt/server || exit 1
 
@@ -664,13 +798,16 @@ echo "⚡ Installing NeoForge server for Minecraft {mc_version}"
 apt-get update && apt-get install -y curl jq unzip
 
 # Clean up any existing files
-rm -rf mods/ config/ server.jar neoforge-installer.jar
+rm -rf mods/ config/ modpack_temp/ server.jar neoforge-installer.jar
 
 # Create necessary directories
 mkdir -p mods config logs
 
-MINECRAFT_VERSION="{mc_version}"
-NEOFORGE_VERSION="${{NEOFORGE_VERSION:-{loader_version}}}"
+{self._get_modpack_prepare_script()}
+
+MINECRAFT_VERSION={shlex.quote(mc_version)}
+NEOFORGE_VERSION="${{NEOFORGE_VERSION:-}}"
+[[ -n "$NEOFORGE_VERSION" ]] || NEOFORGE_VERSION={shlex.quote(loader_version)}
 
 if [[ "$NEOFORGE_VERSION" == "latest" ]]; then
     echo "⬇️ Fetching latest NeoForge version..."
@@ -693,33 +830,24 @@ java -jar neoforge-installer.jar --installServer
 
 rm -f neoforge-installer.jar
 
-# Download modpack if URL provided
-if [[ -n "${{MODPACK_URL}}" ]]; then
-    echo "📦 Downloading modpack..."
-    curl -o modpack.zip -sSL "${{MODPACK_URL}}"
-    if [[ -f modpack.zip ]]; then
-        unzip -o modpack.zip -d modpack_temp/
-        if [[ -d modpack_temp/overrides ]]; then
-            cp -r modpack_temp/overrides/* ./
-        fi
-        rm -rf modpack.zip modpack_temp/
-    fi
-fi
+{self._get_modpack_files_script(info)}
 
 # Accept EULA
 echo "eula=true" > eula.txt
 
 echo "✅ NeoForge server installation completed!"
-'''
+"""
 
     def _get_quilt_install_script(
         self, mc_version: str, loader_version: str, info: ModpackInfo
     ) -> str:
         """Generate Quilt server installation script."""
-        return f'''#!/bin/bash
+        return f"""#!/bin/bash
+set -euo pipefail
+
 # Quilt Server Installation Script - Generated by Hatchery
-# Modpack: {info.name}
-# Source: {info.source_url}
+# Modpack: {self._shell_comment(info.name)}
+# Source: {self._shell_comment(info.source_url)}
 
 cd /mnt/server || exit 1
 
@@ -729,13 +857,16 @@ echo "🪡 Installing Quilt server for Minecraft {mc_version}"
 apt-get update && apt-get install -y curl jq unzip
 
 # Clean up any existing files
-rm -rf mods/ config/ server.jar quilt-installer.jar
+rm -rf mods/ config/ modpack_temp/ server.jar quilt-installer.jar
 
 # Create necessary directories
 mkdir -p mods config logs
 
-MINECRAFT_VERSION="{mc_version}"
-QUILT_VERSION="${{QUILT_VERSION:-{loader_version}}}"
+{self._get_modpack_prepare_script()}
+
+MINECRAFT_VERSION={shlex.quote(mc_version)}
+QUILT_VERSION="${{QUILT_VERSION:-}}"
+[[ -n "$QUILT_VERSION" ]] || QUILT_VERSION={shlex.quote(loader_version)}
 
 if [[ "$QUILT_VERSION" == "latest" ]]; then
     echo "⬇️ Fetching latest Quilt version..."
@@ -763,28 +894,19 @@ fi
 
 rm -f quilt-installer.jar
 
-# Download modpack if URL provided
-if [[ -n "${{MODPACK_URL}}" ]]; then
-    echo "📦 Downloading modpack..."
-    curl -o modpack.zip -sSL "${{MODPACK_URL}}"
-    if [[ -f modpack.zip ]]; then
-        unzip -o modpack.zip -d modpack_temp/
-        if [[ -d modpack_temp/overrides ]]; then
-            cp -r modpack_temp/overrides/* ./
-        fi
-        rm -rf modpack.zip modpack_temp/
-    fi
-fi
+{self._get_modpack_files_script(info)}
 
 # Accept EULA
 echo "eula=true" > eula.txt
 
 echo "✅ Quilt server installation completed!"
-'''
+"""
 
     def _get_vanilla_install_script(self, mc_version: str, info: ModpackInfo) -> str:
         """Generate Vanilla server installation script."""
         return f'''#!/bin/bash
+set -euo pipefail
+
 # Vanilla Server Installation Script - Generated by Hatchery
 # Modpack: {info.name}
 # Source: {info.source_url}
@@ -925,6 +1047,20 @@ echo "✅ Vanilla server installation completed!"
                     "user_viewable": True,
                     "user_editable": True,
                     "rules": "nullable|url",
+                    "field_type": "text",
+                }
+            )
+
+        if modpack_info.source == ModpackSource.CURSEFORGE:
+            variables.append(
+                {
+                    "name": "CurseForge API Key",
+                    "description": "API key used by the installer to resolve pack files.",
+                    "env_variable": "CF_API_KEY",
+                    "default_value": "",
+                    "user_viewable": True,
+                    "user_editable": True,
+                    "rules": "required|string",
                     "field_type": "text",
                 }
             )

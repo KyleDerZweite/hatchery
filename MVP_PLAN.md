@@ -1,5 +1,8 @@
 # MVP Plan: Hatchery
 
+> Implementation status: complete as of the verified acceptance audit in
+> `AUDIT.md`. The priorities below are retained as the execution record.
+
 ## MVP Objective
 
 Deliver a self-hosted MVP that lets an authenticated Minecraft server operator sign in, create an editable egg from a modpack URL, verify panel compatibility, and export the egg artifact for use on self-managed infrastructure.

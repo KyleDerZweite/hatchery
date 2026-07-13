@@ -1,5 +1,9 @@
 # Product Strategy: Hatchery
 
+> Historical planning snapshot from 2026-04-04. Its “current state” findings are
+> not the present implementation; see `README.md`, `MVP_PLAN.md`, and `AUDIT.md`
+> for the current product scope and verified state.
+
 ## Document Purpose
 
 This document describes how to transition Hatchery from an engineering project into a viable product, based on the repository state as of April 4, 2026.

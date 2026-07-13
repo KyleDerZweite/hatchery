@@ -1,5 +1,42 @@
 # Project Audit — 2026-07-06
 
+## MVP acceptance audit — 2026-07-11
+
+| Requirement | Current evidence |
+| --- | --- |
+| Stable runtime | Both production images build; the backend migrates and starts against PostgreSQL 16. |
+| OIDC authentication | Zitadel Authorization Code + PKCE frontend flow and JWT/JWKS backend validation; valid, expired, missing-expiry, wrong-audience, and key-rotation tests pass. |
+| Modrinth and CurseForge import | Route-level tests cover both providers, version selection, canonical URL validation, upstream failures, and incomplete packs. |
+| Runnable egg generation | PTDL v2 output includes loader-aware installation and startup; Bash syntax is checked for Fabric, Forge, NeoForge, and Quilt. |
+| Egg management | Create, list, read, update, regenerate, export, delete authorization, and public/private visibility are implemented and tested. |
+| Panel management | Create, list, read, update, key rotation, validation, and delete APIs are implemented; the MVP UI covers add/list/test/delete. |
+| Panel compatibility test | Real application API calls distinguish success, authentication rejection, redirects, incompatibility, and unreachable panels without forwarding credentials across redirects. |
+| Persistence and migrations | PostgreSQL is the production path; Alembic round trips on SQLite and migrates from a clean PostgreSQL container at startup. |
+| Secrets at rest | Panel keys use Fernet encryption; tests inspect database ciphertext, decrypt it, rotate it, and verify API responses never expose it. |
+| Outbound controls | Provider/panel requests have timeouts, strict URL handling, redirect controls, and per-user throttling for expensive operations. |
+| Build health and tests | Ruff, formatting, mypy, 29 backend tests, ESLint, TypeScript, and the Vite production build pass. |
+| Self-hosted package | Podman Compose provides backend, Nginx frontend, PostgreSQL, health checks, migrations, required secrets, and an optional Pangolin profile. |
+| Operator documentation | `README.md`, `.env.example`, `DEVELOPMENT.md`, and `OPERATIONS.md` cover setup, Zitadel, PostgreSQL, backup/restore, and upgrades. |
+
+The built-image smoke test created a disposable PostgreSQL 16 instance, ran the
+backend container's actual migration/start command, received 200 from `/health`,
+received 401 from the protected egg API, served the SPA from the frontend image,
+and received the same 401 through Nginx's `/api` proxy.
+
+### Follow-up repairs
+
+Generated installation scripts previously unpacked only `overrides`, omitting
+the mods referenced by Modrinth and CurseForge pack manifests. They now resolve
+server-compatible Modrinth index entries and CurseForge manifest file
+references, apply server overrides, pin loader versions from pack metadata,
+reject unsafe indexed paths, and support modern Forge/NeoForge `run.sh`
+startup. Generated scripts are syntax-tested for all four supported loaders,
+and a fixture executes the Modrinth resolver to prove required downloads,
+server exclusions, and both override layers. A second fixture executes
+CurseForge manifest resolution and file installation. URL host matching,
+requested-version handling, pagination bounds, regeneration metadata,
+permission-aware UI controls, and operator documentation were also hardened.
+
 Full end-to-end audit and repair of the Hatchery MVP. Every finding below was
 verified against the code before fixing, and every fix was verified afterwards
 (including against a real PostgreSQL 16 container). Nothing in this document is
@@ -96,7 +133,7 @@ enums and `json_data` nullability was aligned, so
   secret generation. The hardcoded personal default domain in
   `app/core/config.py` was replaced with `auth.example.com`.
 
-## Test coverage added
+## Original test coverage added
 
 The suite grew from 4 to 15 tests:
 
@@ -107,7 +144,7 @@ The suite grew from 4 to 15 tests:
 - Panel test scheme rejection and redirect refusal.
 - Regression guard asserting all datetime columns are timezone-aware.
 
-## Verification performed
+## Original verification performed
 
 - `pytest` (15 passed), `ruff check`, `ruff format --check`, `mypy` — clean.
 - `eslint`, `tsc -b`, `vite build` — clean.
@@ -130,9 +167,6 @@ The suite grew from 4 to 15 tests:
   uses them; any authenticated Zitadel user can use the app (resources are
   still owner-scoped). This matches the self-hosted MVP design. Gate the
   routers with `require_member` if Zitadel role grants should control access.
-- Cosmetics: undefined `card-vine` CSS class (9 uses, silent no-op), the
-  create-egg form keeps the previous visibility/Java selection, `limit` query
-  params are unbounded, and the JS bundle exceeds 500 kB (no code splitting).
 
 ## Migration note for existing deployments
 

@@ -16,12 +16,14 @@ os.environ.setdefault("ZITADEL_DOMAIN", "auth.test.local")
 os.environ.setdefault("ZITADEL_PROJECT_ID", "test-project")
 
 from app.core.db import engine  # noqa: E402
+from app.core.rate_limit import external_operation_limiter  # noqa: E402
 from app.core.security import User, get_current_user  # noqa: E402
 from app.main import app  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
 async def reset_db() -> AsyncIterator[None]:
+    await external_operation_limiter.reset()
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
