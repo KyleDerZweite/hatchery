@@ -12,7 +12,11 @@ class _Window:
 
 
 class FixedWindowRateLimiter:
-    """Small per-process limiter for costly outbound operations."""
+    """Small per-process limiter for costly outbound operations.
+
+    ponytail: counters live in this process, so N workers allow N x limit. Move the
+    window to a shared store when the API runs more than one worker.
+    """
 
     def __init__(self, limit: int, window_seconds: int) -> None:
         self.limit = limit

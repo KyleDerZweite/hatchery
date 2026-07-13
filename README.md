@@ -1,96 +1,70 @@
 # Hatchery
 
-Hatchery is a self hosted modpack to egg workflow for Minecraft server operators.
-It is licensed under the GNU Affero General Public License v3.0 or later.
+Hatchery turns a Modrinth or CurseForge modpack URL into an editable, exportable
+Pterodactyl-compatible egg. Self-hosted, AGPLv3-or-later.
 
-## MVP
+## Run it locally
 
-The MVP does five things:
+Prerequisites: [uv](https://docs.astral.sh/uv/getting-started/installation/),
+[pnpm](https://pnpm.io/installation), and Node 22+.
 
-1. Sign in with Zitadel.
-2. Import a Modrinth or CurseForge modpack URL.
-3. Generate an editable Pterodactyl compatible egg.
-4. Validate a panel connection with an application API key.
-5. Export the egg JSON.
+```bash
+./dev.sh
+```
 
-Panel deployment is not part of the MVP.
+That starts the API on <http://127.0.0.1:8000> and the app on
+<http://127.0.0.1:5173>, both with hot reloading. It creates `.env` from
+`.env.example` on first run, installs dependencies when the lockfiles change, and
+applies database migrations. Press Ctrl+C to stop both.
+
+No Docker, no Compose, no identity provider. Local development uses SQLite and
+`AUTH_MODE=dev`, which signs you in as a fixed local user (`dev@localhost`, roles
+`ADMIN` and `MEMBER`). Authorization still applies: that user owns the records it
+creates, exactly like a real one.
+
+To import CurseForge packs, set `CURSEFORGE_API_KEY` in `.env`. Modrinth needs no key.
+
+## What it does
+
+1. Import a Modrinth or CurseForge modpack URL.
+2. Generate an editable Pterodactyl-compatible egg.
+3. Validate a panel connection with an application API key.
+4. Export the egg JSON.
+
+Panel deployment is not part of the MVP. Current product direction is in
+[DIRECTION.md](./DIRECTION.md).
+
+## Checks
+
+```bash
+cd backend  && uv run pytest && uv run ruff check . && uv run mypy app
+cd frontend && pnpm lint && pnpm typecheck && pnpm build
+```
+
+## Authentication
+
+| | Local (`AUTH_MODE=dev`) | Production (`AUTH_MODE=zitadel`, the default) |
+|---|---|---|
+| Identity | fixed `dev-user` | Zitadel OIDC, JWT verified against JWKS |
+| Config | none | `ZITADEL_DOMAIN`, `ZITADEL_PROJECT_ID`, `ZITADEL_CLIENT_ID` |
+| Database | SQLite | PostgreSQL |
+
+`AUTH_MODE` defaults to `zitadel`, so the local bypass can never turn on by
+omission. The API refuses to start if `AUTH_MODE=dev` is paired with a
+non-SQLite database, and refuses to start in `zitadel` mode if any required
+setting is missing. The browser app fetches its auth config from
+`/api/auth/config` at startup, so no OIDC settings are baked into the build.
+
+## Production
+
+PostgreSQL + Zitadel, deployed with Compose. See [OPERATIONS.md](./OPERATIONS.md).
+`compose.yaml` is for deployment only — it is not used for local development.
 
 ## Stack
 
-1. Backend: FastAPI, SQLModel, PostgreSQL, Alembic
-2. Frontend: React, Vite, Tailwind
-3. Auth: Zitadel OIDC
-4. Runtime: Podman Compose
-
-## Run
-
-1. Copy `.env.example` to `.env`.
-2. Set the Zitadel variables.
-3. Start the stack:
-
-```bash
-podman-compose up -d
-```
-
-4. Open `http://localhost:3000`.
-
-Production setup, Zitadel configuration, backup/restore, and upgrade procedures
-are documented in [OPERATIONS.md](./OPERATIONS.md).
-
-## Services
-
-1. `frontend`: static app served by Nginx
-2. `backend`: API server with Alembic migrations on startup
-3. `postgres`: production database for the MVP
-4. `newt`: optional Pangolin tunnel sidecar
-
-`newt` is isolated behind the `pangolin` profile so the MVP can run without Pangolin:
-
-```bash
-podman-compose up -d
-```
-
-Enable Pangolin only when needed:
-
-```bash
-podman-compose --profile pangolin up -d
-```
+FastAPI, SQLModel, Alembic, PostgreSQL · React 19, Vite, Tailwind v4, TanStack
+Query · uv (Python), pnpm (JavaScript).
 
 ## License
 
 AGPLv3 or later. See [LICENSE](./LICENSE).
-
-## Backend
-
-```bash
-cd backend
-uv sync --extra dev
-uv run alembic upgrade head
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-## Frontend
-
-```bash
-cd frontend
-pnpm install
-pnpm dev
-```
-
-## Tests
-
-Backend:
-
-```bash
-cd backend
-uv sync --extra dev
-uv run pytest
-```
-
-Frontend:
-
-```bash
-cd frontend
-pnpm typecheck
-pnpm build
-```

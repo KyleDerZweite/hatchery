@@ -10,7 +10,8 @@ from sqlmodel import SQLModel
 
 from alembic import context
 from app.core.config import settings
-from app.models import EggConfig, PanelInstance  # noqa: F401
+from app.models.egg import EggConfig  # noqa: F401
+from app.models.panel import PanelInstance  # noqa: F401
 
 config = context.config
 # Escape % so passwords containing % survive configparser interpolation.

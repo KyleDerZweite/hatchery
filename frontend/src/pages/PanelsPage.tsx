@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import {
   PanelConnectionResult,
   PanelCreateData,
@@ -26,7 +26,6 @@ import {
 } from "@/lib/api";
 import { openExternalUrl } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import {
     CheckCircle,
     ExternalLink,
@@ -38,6 +37,7 @@ import {
 import { useState } from "react";
 
 export function PanelsPage() {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [name, setName] = useState("");
@@ -61,11 +61,11 @@ export function PanelsPage() {
         description: "The panel instance has been added.",
       });
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Failed to add panel",
-        description: error.response?.data?.detail || "An error occurred",
+        description: error.message,
       });
     },
   });
@@ -79,18 +79,18 @@ export function PanelsPage() {
         description: "The panel instance has been removed.",
       });
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Failed to delete panel",
-        description: error.response?.data?.detail || "An error occurred",
+        description: error.message,
       });
     },
   });
 
   const testMutation = useMutation<
     PanelConnectionResult,
-    AxiosError<{ detail: string }>,
+    Error,
     number
   >({
     mutationFn: (id: number) => panelsApi.test(id),
@@ -101,11 +101,11 @@ export function PanelsPage() {
         description: data.panel_type ? `${data.message} (${data.panel_type})` : data.message,
       });
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Connection test failed",
-        description: error.response?.data?.detail || "An error occurred",
+        description: error.message,
       });
     },
   });

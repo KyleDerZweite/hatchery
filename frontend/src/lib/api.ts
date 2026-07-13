@@ -1,67 +1,52 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+// The API is always same-origin: the Vite dev server and the production nginx
+// config both proxy /api to the backend.
+const BASE_URL = '/api'
 
-const API_URL = import.meta.env.VITE_API_URL || ''
-
-export const api = axios.create({
-  baseURL: `${API_URL}/api`,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-})
-
-// Request interceptor to add auth token from OIDC storage
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    // Get token from OIDC storage
-    // react-oidc-context stores user in sessionStorage with key pattern:
-    // oidc.user:<authority>:<client_id>
-    const authority = import.meta.env.VITE_ZITADEL_AUTHORITY;
-    const clientId = import.meta.env.VITE_ZITADEL_CLIENT_ID;
-    const storageKey = `oidc.user:${authority}:${clientId}`;
-
-    const userJson = sessionStorage.getItem(storageKey);
-    if (userJson) {
-      try {
-        const user = JSON.parse(userJson);
-        if (user.access_token) {
-          config.headers.Authorization = `Bearer ${user.access_token}`;
-        }
-      } catch {
-        // Invalid JSON, ignore
-      }
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
-
-// Response interceptor to handle errors
-api.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid - clear OIDC storage
-      const authority = import.meta.env.VITE_ZITADEL_AUTHORITY;
-      const clientId = import.meta.env.VITE_ZITADEL_CLIENT_ID;
-      const storageKey = `oidc.user:${authority}:${clientId}`;
-      sessionStorage.removeItem(storageKey);
-      
-      // Redirect to login
-      window.location.href = '/login';
-    }
-    return Promise.reject(error)
+/** Carries the backend's `detail` string as its message, so callers can show it directly. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
   }
-)
-
-// Types
-export interface User {
-  id: string
-  email: string
-  name: string
-  roles: string[]
-  is_admin: boolean
-  role: 'admin' | 'user'
 }
+
+let accessToken: string | null = null
+
+/** Set by the auth provider. Null in dev mode, where the backend expects no token. */
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...init.headers,
+    },
+  })
+
+  if (!response.ok) {
+    if (response.status === 401) window.location.href = '/login'
+    const detail = await response
+      .json()
+      .then((body) => body?.detail)
+      .catch(() => null)
+    throw new ApiError(
+      response.status,
+      typeof detail === 'string' ? detail : `Request failed (${response.status})`,
+    )
+  }
+
+  return response.status === 204 ? (undefined as T) : response.json()
+}
+
+const send = <T>(method: string, path: string, body?: unknown) =>
+  request<T>(path, { method, body: body === undefined ? undefined : JSON.stringify(body) })
 
 export interface PanelInstance {
   id: number
@@ -85,6 +70,14 @@ export interface PanelCreateData {
   description?: string
 }
 
+export interface PanelConnectionResult {
+  success: boolean
+  status: 'ok' | 'failed'
+  message: string
+  panel_type?: string | null
+  checked_endpoint?: string | null
+}
+
 export interface EggConfig {
   id: number
   name: string
@@ -102,86 +95,25 @@ export interface EggConfig {
   json_data?: Record<string, unknown>
 }
 
-export interface PanelConnectionResult {
-  success: boolean
-  status: 'ok' | 'failed'
-  message: string
-  panel_type?: string | null
-  checked_endpoint?: string | null
-}
-
 export interface EggCreateData {
   source_url: string
   visibility?: 'public' | 'private'
   java_version?: number
 }
 
-// Panels API
 export const panelsApi = {
-  list: async (): Promise<PanelInstance[]> => {
-    const response = await api.get('/panels')
-    return response.data
-  },
-  
-  get: async (id: number): Promise<PanelInstance> => {
-    const response = await api.get(`/panels/${id}`)
-    return response.data
-  },
-  
-  create: async (data: PanelCreateData): Promise<PanelInstance> => {
-    const response = await api.post('/panels', data)
-    return response.data
-  },
-  
-  update: async (id: number, data: Partial<PanelCreateData>): Promise<PanelInstance> => {
-    const response = await api.patch(`/panels/${id}`, data)
-    return response.data
-  },
-  
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`/panels/${id}`)
-  },
-  
-  test: async (id: number): Promise<PanelConnectionResult> => {
-    const response = await api.post(`/panels/${id}/test`)
-    return response.data
-  },
+  list: () => request<PanelInstance[]>('/panels'),
+  create: (data: PanelCreateData) => send<PanelInstance>('POST', '/panels', data),
+  delete: (id: number) => send<void>('DELETE', `/panels/${id}`),
+  test: (id: number) => send<PanelConnectionResult>('POST', `/panels/${id}/test`),
 }
 
-// Eggs API
 export const eggsApi = {
-  list: async (visibility?: 'public' | 'private'): Promise<EggConfig[]> => {
-    const params = visibility ? { visibility } : {}
-    const response = await api.get('/eggs', { params })
-    return response.data
-  },
-  
-  get: async (id: number): Promise<EggConfig> => {
-    const response = await api.get(`/eggs/${id}`)
-    return response.data
-  },
-  
-  create: async (data: EggCreateData): Promise<EggConfig> => {
-    const response = await api.post('/eggs', data)
-    return response.data
-  },
-  
-  update: async (id: number, data: Partial<EggConfig>): Promise<EggConfig> => {
-    const response = await api.patch(`/eggs/${id}`, data)
-    return response.data
-  },
-  
-  delete: async (id: number): Promise<void> => {
-    await api.delete(`/eggs/${id}`)
-  },
-  
-  export: async (id: number): Promise<Record<string, unknown>> => {
-    const response = await api.get(`/eggs/${id}/export`)
-    return response.data
-  },
-  
-  regenerate: async (id: number): Promise<EggConfig> => {
-    const response = await api.post(`/eggs/${id}/regenerate`)
-    return response.data
-  },
+  list: () => request<EggConfig[]>('/eggs'),
+  get: (id: number) => request<EggConfig>(`/eggs/${id}`),
+  create: (data: EggCreateData) => send<EggConfig>('POST', '/eggs', data),
+  update: (id: number, data: Partial<EggConfig>) => send<EggConfig>('PATCH', `/eggs/${id}`, data),
+  delete: (id: number) => send<void>('DELETE', `/eggs/${id}`),
+  export: (id: number) => request<Record<string, unknown>>(`/eggs/${id}/export`),
+  regenerate: (id: number) => send<EggConfig>('POST', `/eggs/${id}/regenerate`),
 }

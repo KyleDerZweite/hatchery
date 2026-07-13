@@ -5,9 +5,10 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import col, or_, select
 
 from app.api.dependencies import get_egg_or_404_read, get_egg_or_404_write
-from app.core import CurrentUser, SessionDep
+from app.core.db import SessionDep
 from app.core.rate_limit import external_operation_limiter
-from app.models import (
+from app.core.security import CurrentUser
+from app.models.egg import (
     EggConfig,
     EggConfigCreate,
     EggConfigRead,
@@ -15,7 +16,7 @@ from app.models import (
     EggConfigUpdate,
     Visibility,
 )
-from app.services import ModpackService, get_modpack_service
+from app.services.modpack_service import modpack_service
 
 router = APIRouter(prefix="/eggs", tags=["Egg Configurations"])
 
@@ -25,31 +26,16 @@ async def create_egg_from_url(
     egg_data: EggConfigCreate,
     current_user: CurrentUser,
     session: SessionDep,
-    modpack_service: Annotated[ModpackService, Depends(get_modpack_service)],
 ):
-    """
-    Create a new egg configuration from a modpack URL.
-
-    This endpoint:
-    1. Parses the modpack URL (CurseForge/Modrinth)
-    2. Fetches modpack metadata
-    3. Generates Pterodactyl egg JSON
-    4. Saves the configuration
-    """
+    """Create an egg configuration from a CurseForge or Modrinth modpack URL."""
     await external_operation_limiter.check(f"egg:{current_user.id}")
 
-    # Fetch modpack info from URL
     modpack_info = await modpack_service.fetch_modpack_info(egg_data.source_url)
-
-    # Determine Java version
     java_version = egg_data.java_version or modpack_info.java_version
-
-    # Generate egg JSON
     egg_json = modpack_service.generate_egg_json(
         modpack_info, java_version, author_email=current_user.email
     )
 
-    # Create egg config
     egg = EggConfig(
         name=modpack_info.name,
         source_url=egg_data.source_url,
@@ -119,17 +105,10 @@ async def update_egg(
     egg_update: EggConfigUpdate,
     session: SessionDep,
     egg: EggConfig = Depends(get_egg_or_404_write),
-    modpack_service: ModpackService = Depends(get_modpack_service),
 ):
-    """
-    Update an egg configuration.
-
-    Only the owner or admin can update.
-    """
-
+    """Update an egg configuration. Owner or admin only."""
     update_data = egg_update.model_dump(exclude_unset=True)
 
-    # Handle Java version update for JSON data
     if "java_version" in update_data:
         egg.json_data = modpack_service.update_egg_json_for_java(
             egg.json_data, update_data["java_version"], egg.modloader
@@ -176,14 +155,8 @@ async def regenerate_egg(
     session: SessionDep,
     current_user: CurrentUser,
     egg: EggConfig = Depends(get_egg_or_404_write),
-    modpack_service: ModpackService = Depends(get_modpack_service),
 ):
-    """
-    Regenerate the egg JSON from the source URL.
-
-    Useful if the modpack has been updated or the egg generation logic has changed.
-    """
-
+    """Regenerate the egg JSON from the source URL. Owner or admin only."""
     await external_operation_limiter.check(f"egg:{current_user.id}")
 
     # Re-fetch modpack info

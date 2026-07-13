@@ -5,9 +5,10 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlmodel import col, select
 
 from app.api.dependencies import get_panel_or_404
-from app.core import CurrentUser, SessionDep
+from app.core.db import SessionDep
 from app.core.rate_limit import external_operation_limiter
-from app.models import (
+from app.core.security import CurrentUser
+from app.models.panel import (
     PanelConnectionTestResult,
     PanelInstance,
     PanelInstanceCreate,

@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 import httpx
 from fastapi import HTTPException, status
 
-from app.core.config import settings
+from app.core.config import USER_AGENT, settings
 from app.models.egg import ModpackSource
 
 
@@ -77,7 +77,7 @@ class ModpackService:
     def __init__(self):
         self.http_client = httpx.AsyncClient(
             timeout=30.0,
-            headers={"User-Agent": settings.modrinth_user_agent},
+            headers={"User-Agent": USER_AGENT},
         )
 
     async def close(self):
@@ -1081,10 +1081,5 @@ echo "✅ Vanilla server installation completed!"
             return "1536"
 
 
-# Singleton instance
+# One shared instance so the HTTP connection pool is reused across requests.
 modpack_service = ModpackService()
-
-
-async def get_modpack_service() -> ModpackService:
-    """Get the modpack service instance."""
-    return modpack_service

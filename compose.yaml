@@ -1,0 +1,52 @@
+# Production deployment only. Local development uses ./dev.sh and needs none of this.
+# Usage: podman-compose up -d   (see OPERATIONS.md)
+services:
+  backend:
+    build: ./backend
+    environment:
+      - AUTH_MODE=zitadel
+      - DATABASE_URL=${DATABASE_URL:?Set DATABASE_URL in .env}
+      - PANEL_API_KEY_ENCRYPTION_SECRET=${PANEL_API_KEY_ENCRYPTION_SECRET:?Set PANEL_API_KEY_ENCRYPTION_SECRET in .env}
+      - ZITADEL_DOMAIN=${ZITADEL_DOMAIN:?Set ZITADEL_DOMAIN in .env}
+      - ZITADEL_PROJECT_ID=${ZITADEL_PROJECT_ID:?Set ZITADEL_PROJECT_ID in .env}
+      - ZITADEL_CLIENT_ID=${ZITADEL_CLIENT_ID:?Set ZITADEL_CLIENT_ID in .env}
+      - CURSEFORGE_API_KEY=${CURSEFORGE_API_KEY:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-[]}
+    # Not published: only the frontend's nginx reaches it, over the compose network.
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Serves the built app and proxies /api to the backend, so the two are same-origin.
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: hatchery
+      POSTGRES_DB: hatchery
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hatchery -d hatchery"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

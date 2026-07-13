@@ -16,10 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { EggConfig, eggsApi } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import { useState } from "react";
 
 interface EditEggDialogProps {
@@ -29,6 +28,7 @@ interface EditEggDialogProps {
 }
 
 export function EditEggDialog({ egg, open, onOpenChange }: EditEggDialogProps) {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
   const [name, setName] = useState(egg.name);
   const [description, setDescription] = useState(egg.description || "");
@@ -46,11 +46,11 @@ export function EditEggDialog({ egg, open, onOpenChange }: EditEggDialogProps) {
         description: "The egg configuration has been updated successfully.",
       });
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Failed to update egg",
-        description: error.response?.data?.detail || "An error occurred",
+        description: error.message,
       });
     },
   });

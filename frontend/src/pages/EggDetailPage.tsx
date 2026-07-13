@@ -1,21 +1,21 @@
 import { EditEggDialog } from '@/components/eggs/EditEggDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toast } from '@/components/ui/use-toast'
+import { useToast } from '@/components/ui/use-toast';
 import { eggsApi } from '@/lib/api'
 import { openExternalUrl } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AxiosError } from 'axios'
 import { ArrowLeft, Copy, Download, ExternalLink, Pencil, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 export function EggDetailPage() {
+  const { toast } = useToast();
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { canManage } = useAuth()
   const [isEditOpen, setIsEditOpen] = useState(false)
 
   const { data: egg, isLoading, error } = useQuery({
@@ -34,11 +34,11 @@ export function EggDetailPage() {
         description: 'The egg configuration has been updated.',
       })
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
+    onError: (error: Error) => {
       toast({
         variant: 'destructive',
         title: 'Failed to regenerate',
-        description: error.response?.data?.detail || 'An error occurred',
+        description: error.message,
       })
     },
   })
@@ -134,7 +134,7 @@ export function EggDetailPage() {
             <ExternalLink className="mr-2 h-4 w-4" />
             Source
           </Button>
-          {(user?.id === egg.owner_id || user?.role === 'admin') && (
+          {canManage(egg.owner_id) && (
             <Button 
                 variant="outline" 
                 onClick={() => setIsEditOpen(true)}
@@ -144,7 +144,7 @@ export function EggDetailPage() {
               Edit
             </Button>
           )}
-          {(user?.id === egg.owner_id || user?.role === 'admin') && (
+          {canManage(egg.owner_id) && (
             <Button
               variant="outline"
               onClick={() => regenerateMutation.mutate()}

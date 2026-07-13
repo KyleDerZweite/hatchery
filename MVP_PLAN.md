@@ -1,7 +1,8 @@
 # MVP Plan: Hatchery
 
-> Implementation status: complete as of the verified acceptance audit in
-> `AUDIT.md`. The priorities below are retained as the execution record.
+> **SUPERSEDED 2026-07-13 by [DIRECTION.md](./DIRECTION.md).** The MVP described
+> here is complete (see `AUDIT.md`); its forward-looking roadmap is void. This
+> document is retained as the execution record only.
 
 ## MVP Objective
 

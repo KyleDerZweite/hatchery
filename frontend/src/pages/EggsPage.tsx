@@ -25,19 +25,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { EggConfig, EggCreateData, eggsApi } from "@/lib/api";
 import { openExternalUrl } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AxiosError } from "axios";
 import { Egg, ExternalLink, Eye, EyeOff, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 export function EggsPage() {
+  const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { canManage } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEgg, setEditingEgg] = useState<EggConfig | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
@@ -62,11 +62,11 @@ export function EggsPage() {
         description: "Your egg configuration has been generated.",
       });
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Failed to create egg",
-        description: error.response?.data?.detail || "An error occurred",
+        description: error.message,
       });
     },
   });
@@ -80,11 +80,11 @@ export function EggsPage() {
         description: "The egg configuration has been removed.",
       });
     },
-    onError: (error: AxiosError<{ detail: string }>) => {
+    onError: (error: Error) => {
       toast({
         variant: "destructive",
         title: "Failed to delete egg",
-        description: error.response?.data?.detail || "An error occurred",
+        description: error.message,
       });
     },
   });
@@ -241,7 +241,7 @@ export function EggsPage() {
                   <Button asChild size="sm" className="flex-1 bg-primary/20 hover:bg-primary/30 text-primary-foreground border border-primary/20">
                     <Link to={`/eggs/${egg.id}`}>View Details</Link>
                   </Button>
-                  {(user?.id === egg.owner_id || user?.role === 'admin') && (
+                  {canManage(egg.owner_id) && (
                     <Button
                         size="sm"
                         variant="ghost"
@@ -259,7 +259,7 @@ export function EggsPage() {
                   >
                     <ExternalLink className="h-4 w-4" />
                   </Button>
-                  {(user?.id === egg.owner_id || user?.role === 'admin') && (
+                  {canManage(egg.owner_id) && (
                     <Button
                         size="sm"
                         variant="ghost"

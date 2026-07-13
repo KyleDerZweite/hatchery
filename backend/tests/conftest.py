@@ -8,12 +8,15 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import SQLModel
 
+# Set before app import: Settings is built at import time. Assigned rather than
+# defaulted so a developer's local .env cannot change what the suite exercises.
 test_db_path = Path(__file__).parent / "test.db"
-os.environ.setdefault("DATABASE_URL", f"sqlite:///{test_db_path}")
-os.environ.setdefault("SECRET_KEY", "test-secret")
-os.environ.setdefault("PANEL_API_KEY_ENCRYPTION_SECRET", "test-panel-secret")
-os.environ.setdefault("ZITADEL_DOMAIN", "auth.test.local")
-os.environ.setdefault("ZITADEL_PROJECT_ID", "test-project")
+os.environ["AUTH_MODE"] = "zitadel"
+os.environ["DATABASE_URL"] = f"sqlite:///{test_db_path}"
+os.environ["PANEL_API_KEY_ENCRYPTION_SECRET"] = "test-panel-secret"
+os.environ["ZITADEL_DOMAIN"] = "auth.test.local"
+os.environ["ZITADEL_PROJECT_ID"] = "test-project"
+os.environ["ZITADEL_CLIENT_ID"] = "test-client"
 
 from app.core.db import engine  # noqa: E402
 from app.core.rate_limit import external_operation_limiter  # noqa: E402

@@ -1,94 +1,58 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { Layout } from "./components/layout/Layout";
-import { AuthCallback, useAuth } from "./lib/auth";
-
-const DashboardPage = lazy(() =>
-  import("./pages/DashboardPage").then((module) => ({ default: module.DashboardPage })),
-);
-const EggDetailPage = lazy(() =>
-  import("./pages/EggDetailPage").then((module) => ({ default: module.EggDetailPage })),
-);
-const EggsPage = lazy(() =>
-  import("./pages/EggsPage").then((module) => ({ default: module.EggsPage })),
-);
-const LoginPage = lazy(() =>
-  import("./pages/LoginPage").then((module) => ({ default: module.LoginPage })),
-);
-const PanelsPage = lazy(() =>
-  import("./pages/PanelsPage").then((module) => ({ default: module.PanelsPage })),
-);
-const SettingsPage = lazy(() =>
-  import("./pages/SettingsPage").then((module) => ({ default: module.SettingsPage })),
-);
+import { useEffect, type ReactNode } from 'react'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Layout } from './components/layout/Layout'
+import { AuthCallback, useAuth } from './lib/auth'
+import { DashboardPage } from './pages/DashboardPage'
+import { EggDetailPage } from './pages/EggDetailPage'
+import { EggsPage } from './pages/EggsPage'
+import { LoginPage } from './pages/LoginPage'
+import { PanelsPage } from './pages/PanelsPage'
+import { SettingsPage } from './pages/SettingsPage'
 
 function PageLoader() {
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+    <div role="status" className="flex h-screen items-center justify-center">
+      <span className="sr-only">Loading…</span>
+      <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
     </div>
-  );
+  )
 }
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, login } = useAuth();
-  const location = useLocation();
-  // Guard so signinRedirect fires once, not on every re-render while unauthenticated
-  const redirecting = useRef(false);
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated, isLoading, login } = useAuth()
+  const location = useLocation()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && !redirecting.current) {
-      redirecting.current = true;
-      // Store the intended destination for redirect after login
-      sessionStorage.setItem("auth_redirect", location.pathname);
-      login();
-    }
-  });
+    if (isLoading || isAuthenticated) return
+    sessionStorage.setItem('auth_redirect', location.pathname)
+    login()
+    // Depending only on the auth state keeps this from re-firing on every render
+    // while the identity provider redirect is in flight.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isLoading])
 
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  return <>{children}</>;
+  if (isLoading || !isAuthenticated) return <PageLoader />
+  return <>{children}</>
 }
 
-function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+export default function App() {
+  const { isAuthenticated, isLoading } = useAuth()
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return <>{children}</>;
-}
-
-function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
+    <Routes>
       <Route path="/callback" element={<AuthCallback />} />
-
       <Route
         path="/login"
         element={
-          <PublicRoute>
+          isLoading ? (
+            <PageLoader />
+          ) : isAuthenticated ? (
+            <Navigate to="/dashboard" replace />
+          ) : (
             <LoginPage />
-          </PublicRoute>
+          )
         }
       />
-
       <Route
         path="/"
         element={
@@ -104,11 +68,7 @@ function App() {
         <Route path="panels" element={<PanelsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
-
       <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
-  );
+    </Routes>
+  )
 }
-
-export default App;

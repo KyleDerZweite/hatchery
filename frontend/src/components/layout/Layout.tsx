@@ -22,7 +22,7 @@ const navigation = [
 ];
 
 export function Layout() {
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -111,7 +111,7 @@ export function Layout() {
                 {user?.name || user?.email}
               </span>
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
-                {user?.role || "User"}
+                {isAdmin ? "Admin" : "Member"}
               </span>
             </div>
           </div>

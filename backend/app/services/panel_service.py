@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import logging
 from urllib.parse import urljoin, urlparse
 
 import httpx
-import structlog
 from cryptography.fernet import Fernet, InvalidToken
 
-from app.core.config import settings
+from app.core.config import PANEL_API_TIMEOUT_SECONDS, settings
 from app.models.panel import PanelConnectionTestResult
 
-logger = structlog.get_logger()
+logger = logging.getLogger(__name__)
 
 PANEL_ACCEPT_HEADER = "Application/vnd.pterodactyl.v1+json"
 PANEL_CHECK_PATHS = (
@@ -56,7 +56,7 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
     # an attacker-chosen host via a 3xx response.
     async with httpx.AsyncClient(
         headers=headers,
-        timeout=settings.panel_api_timeout_seconds,
+        timeout=PANEL_API_TIMEOUT_SECONDS,
         follow_redirects=False,
     ) as client:
         for path in PANEL_CHECK_PATHS:
@@ -64,7 +64,7 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
             try:
                 response = await client.get(endpoint)
             except httpx.HTTPError as exc:
-                logger.warning("panel_connection_http_error", url=normalized_url, error=str(exc))
+                logger.warning("Panel %s is unreachable: %s", normalized_url, exc)
                 return PanelConnectionTestResult(
                     success=False,
                     status="failed",
@@ -73,7 +73,7 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
                 )
 
             if response.status_code == 200:
-                logger.info("panel_connection_success", url=normalized_url, endpoint=endpoint)
+                logger.info("Panel %s reachable at %s", normalized_url, endpoint)
                 return PanelConnectionTestResult(
                     success=True,
                     status="ok",
@@ -82,13 +82,7 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
                     checked_endpoint=endpoint,
                 )
             if response.is_redirect:
-                location = response.headers.get("location", "")
-                logger.info(
-                    "panel_connection_redirected",
-                    url=normalized_url,
-                    endpoint=endpoint,
-                    location=location,
-                )
+                logger.info("Panel %s redirected %s away from the API", normalized_url, endpoint)
                 return PanelConnectionTestResult(
                     success=False,
                     status="failed",
@@ -98,10 +92,7 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
                 )
             if response.status_code in {401, 403}:
                 logger.info(
-                    "panel_connection_auth_failed",
-                    url=normalized_url,
-                    endpoint=endpoint,
-                    status_code=response.status_code,
+                    "Panel %s rejected the API key (%s)", normalized_url, response.status_code
                 )
                 return PanelConnectionTestResult(
                     success=False,
@@ -110,7 +101,7 @@ async def test_panel_connection(base_url: str, api_key: str) -> PanelConnectionT
                     checked_endpoint=endpoint,
                 )
 
-    logger.info("panel_connection_incompatible", url=normalized_url)
+    logger.info("Panel %s exposes no compatible application API", normalized_url)
     return PanelConnectionTestResult(
         success=False,
         status="failed",

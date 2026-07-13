@@ -277,7 +277,7 @@ async def test_modrinth_pack_without_downloadable_file_is_rejected(client):
 
 
 async def test_curseforge_egg_resolves_manifest_files():
-    from app.models import ModpackSource
+    from app.models.egg import ModpackSource
     from app.services.modpack_service import ModpackInfo, ModpackService, ModpackType
 
     service = ModpackService()
@@ -344,7 +344,7 @@ async def test_curseforge_pack_imports_through_api(client, monkeypatch):
 
 @pytest.mark.parametrize("loader", ["fabric", "forge", "neoforge", "quilt"])
 async def test_generated_modrinth_install_scripts_are_valid_bash(loader):
-    from app.models import ModpackSource
+    from app.models.egg import ModpackSource
     from app.services.modpack_service import ModpackInfo, ModpackService, ModpackType
 
     service = ModpackService()
@@ -369,7 +369,7 @@ async def test_generated_modrinth_install_scripts_are_valid_bash(loader):
 
 
 async def test_modrinth_pack_file_resolver_executes(tmp_path):
-    from app.models import ModpackSource
+    from app.models.egg import ModpackSource
     from app.services.modpack_service import ModpackInfo, ModpackService
 
     required_file = tmp_path / "required.jar"
@@ -430,7 +430,7 @@ async def test_modrinth_pack_file_resolver_executes(tmp_path):
 
 
 async def test_curseforge_pack_file_resolver_executes(tmp_path):
-    from app.models import ModpackSource
+    from app.models.egg import ModpackSource
     from app.services.modpack_service import ModpackInfo, ModpackService
 
     server_dir = tmp_path / "server"
@@ -510,7 +510,7 @@ def test_datetime_columns_are_timezone_aware():
 @respx.mock
 async def test_panel_lifecycle(client):
     from app.core.db import async_session_maker
-    from app.models import PanelInstance
+    from app.models.panel import PanelInstance
     from app.services.panel_service import decrypt_panel_api_key
 
     create_response = await client.post(

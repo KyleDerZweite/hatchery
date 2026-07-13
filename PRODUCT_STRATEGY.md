@@ -1,8 +1,12 @@
 # Product Strategy: Hatchery
 
+> **SUPERSEDED 2026-07-13 by [DIRECTION.md](./DIRECTION.md).** This document is
+> retained as a historical record only. Where it disagrees with `DIRECTION.md`,
+> `DIRECTION.md` wins.
+>
 > Historical planning snapshot from 2026-04-04. Its “current state” findings are
-> not the present implementation; see `README.md`, `MVP_PLAN.md`, and `AUDIT.md`
-> for the current product scope and verified state.
+> not the present implementation; see `README.md` and `AUDIT.md` for the shipped
+> MVP and its verified state.
 
 ## Document Purpose
 
