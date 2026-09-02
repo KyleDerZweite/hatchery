@@ -15,7 +15,7 @@ dependencies = [
     "PyJWT>=2.12.1",
     "httpx>=0.28.1",
     "pydantic>=2.13.3",
-    "pydantic-settings>=2.14.0",
+    "pydantic-settings>=2.14.2",
 ]
 
 [project.optional-dependencies]
