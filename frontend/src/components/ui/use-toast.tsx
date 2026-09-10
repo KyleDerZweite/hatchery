@@ -50,21 +50,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <div
             key={id}
             className={cn(
-              'flex items-start gap-3 rounded-lg border p-4 shadow-lg animate-fade-in-up',
-              variant === 'destructive'
-                ? 'border-destructive bg-destructive text-destructive-foreground'
-                : 'border-border bg-card text-card-foreground',
+              'flex items-start gap-3 rounded-lg border border-border bg-popover p-3 shadow-xl',
+              variant === 'destructive' && 'border-destructive/50',
             )}
           >
             <div className="grid gap-1">
-              <p className="text-sm font-semibold">{title}</p>
-              {description && <p className="text-sm opacity-90">{description}</p>}
+              <p className="text-sm font-medium">{title}</p>
+              {description && <p className="text-sm text-muted-foreground">{description}</p>}
             </div>
             <button
               type="button"
               onClick={() => dismiss(id)}
               aria-label={`Dismiss notification: ${title}`}
-              className="ml-auto rounded-md p-1 opacity-70 hover:opacity-100"
+              className="ml-auto rounded-md p-1 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
