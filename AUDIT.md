@@ -16,7 +16,7 @@
 | Outbound controls | Provider/panel requests have timeouts, strict URL handling, redirect controls, and per-user throttling for expensive operations. |
 | Build health and tests | Ruff, formatting, mypy, 29 backend tests, ESLint, TypeScript, and the Vite production build pass. |
 | Self-hosted package | Podman Compose provides backend, Nginx frontend, PostgreSQL, health checks, migrations, required secrets, and an optional Pangolin profile. |
-| Operator documentation | `README.md`, `.env.example`, `DEVELOPMENT.md`, and `OPERATIONS.md` cover setup, Zitadel, PostgreSQL, backup/restore, and upgrades. |
+| Operator documentation | `README.md`, `.env.example`, and `OPERATIONS.md` cover setup, Zitadel, PostgreSQL, backup/restore, and upgrades. |
 
 The built-image smoke test created a disposable PostgreSQL 16 instance, ran the
 backend container's actual migration/start command, received 200 from `/health`,
