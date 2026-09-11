@@ -29,3 +29,10 @@ updates:
       frontend-dependencies:
         patterns:
           - "*"
+    # TypeScript 7 broke CI because typescript-eslint does not support it yet
+    # (see PR #51). Hold back TypeScript majors until the lint toolchain
+    # catches up; remove this once typescript-eslint supports TS 7.
+    ignore:
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
