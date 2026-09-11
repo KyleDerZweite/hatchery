@@ -1,18 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import {
-    Egg,
-    LayoutDashboard,
-    LogOut,
-    Menu,
-    Server,
-    Settings,
-    Sprout,
-    X,
-} from "lucide-react";
+import { Egg, LayoutDashboard, LogOut, Menu, Server, Settings, X } from "lucide-react";
 import { useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -21,128 +12,100 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
+function Wordmark() {
+  return (
+    <Link to="/dashboard" className="flex items-center gap-2">
+      <span className="flex h-5 w-5 items-center justify-center rounded bg-primary text-[11px] font-semibold text-primary-foreground">
+        H
+      </span>
+      <span className="text-sm font-semibold">Hatchery</span>
+    </Link>
+  );
+}
+
 export function Layout() {
   const { user, isAdmin, logout } = useAuth();
-  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground">
-      {/* Mobile sidebar backdrop */}
+    <div className="min-h-screen bg-background">
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+        <button
+          type="button"
+          aria-label="Close menu"
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-[280px] transform bg-sidebar/95 backdrop-blur-xl border-r border-success/10 transition-transform duration-300 ease-in-out lg:translate-x-0 shadow-2xl",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex w-60 transform flex-col border-r border-border bg-sidebar transition-transform duration-150 lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        {/* Brand Header */}
-        <div className="flex h-24 items-center px-8 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
-          <Link to="/dashboard" className="flex items-center gap-3 group">
-            <div className="p-2 rounded-xl bg-success/10 group-hover:bg-success/20 transition-colors">
-              <Sprout className="h-6 w-6 text-success" />
-            </div>
-            <span className="text-xl font-bold text-white tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
-              Hatchery
-            </span>
-          </Link>
+        <div className="flex h-12 items-center justify-between px-4">
+          <Wordmark />
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden ml-auto hover:bg-white/5 text-muted-foreground hover:text-white"
+            className="lg:hidden"
             onClick={() => setSidebarOpen(false)}
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close menu</span>
           </Button>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex flex-col gap-2 p-4 mt-4">
-          {navigation.map((item) => {
-            const isActive =
-              location.pathname === item.href ||
-              location.pathname.startsWith(item.href + "/");
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={cn(
-                  "flex items-center gap-4 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 group relative overflow-hidden",
+        <nav className="flex flex-1 flex-col gap-0.5 px-2 py-2">
+          {navigation.map((item) => (
+            <NavLink
+              key={item.name}
+              to={item.href}
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
                   isActive
-                    ? "bg-primary/10 text-primary shadow-[0_0_20px_rgba(139,92,246,0.1)]"
-                    : "text-muted-foreground hover:bg-white/5 hover:text-white"
-                )}
-                onClick={() => setSidebarOpen(false)}
-              >
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-primary rounded-r-full shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
-                )}
-                <item.icon
-                  className={cn(
-                    "h-5 w-5 transition-colors",
-                    isActive ? "text-primary" : "group-hover:text-white"
-                  )}
-                />
-                <span>{item.name}</span>
-              </Link>
-            );
-          })}
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                )
+              }
+            >
+              <item.icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {item.name}
+            </NavLink>
+          ))}
         </nav>
 
-        {/* User Profile */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-white/5 p-6 bg-gradient-to-t from-black/20 to-transparent">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-violet-600 p-[1px] shadow-lg shadow-primary/20">
-              <div className="h-full w-full rounded-[11px] bg-sidebar flex items-center justify-center">
-                <span className="text-sm font-bold text-primary">
-                  {(user?.name || user?.email)?.[0]?.toUpperCase() || "U"}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-col overflow-hidden">
-              <span className="text-sm font-semibold text-white truncate">
-                {user?.name || user?.email}
-              </span>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">
-                {isAdmin ? "Admin" : "Member"}
-              </span>
+        <div className="border-t border-border p-2">
+          <div className="flex items-center gap-2 px-2 py-1.5">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary text-[11px] font-medium text-foreground">
+              {(user?.name || user?.email || "?").charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs text-foreground">{user?.email ?? user?.name}</p>
+              <p className="text-xs text-muted-foreground">{isAdmin ? "Admin" : "Member"}</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-muted-foreground hover:text-red-400 hover:bg-red-500/10 h-9 text-xs font-medium transition-colors"
-            onClick={logout}
-          >
-            <LogOut className="h-3.5 w-3.5 mr-2" />
-            Sign Out
+          <Button variant="ghost" className="w-full justify-start gap-2 px-2" onClick={logout}>
+            <LogOut className="h-4 w-4" aria-hidden="true" />
+            Sign out
           </Button>
         </div>
       </aside>
 
-      {/* Main content */}
-      <div className="lg:pl-[280px] min-h-screen flex flex-col transition-all duration-300">
-        {/* Mobile Header */}
-        <header className="lg:hidden sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-white/5 bg-sidebar px-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
+      <div className="flex min-h-screen flex-col lg:pl-60">
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border bg-sidebar px-3 lg:hidden">
+          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+            <Menu className="h-4 w-4" />
+            <span className="sr-only">Open menu</span>
           </Button>
-          <span className="font-bold text-lg">Hatchery</span>
+          <Wordmark />
         </header>
 
-        {/* Main Content */}
-        <main className="flex-1 min-h-screen transition-all duration-300">
-          <div className="container mx-auto p-6 md:p-8 max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <main className="flex-1 px-6 py-8 md:px-10">
+          <div className="mx-auto max-w-5xl">
             <Outlet />
           </div>
         </main>
