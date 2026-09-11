@@ -1,19 +1,26 @@
 import { EditEggDialog } from '@/components/eggs/EditEggDialog'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/use-toast'
 import { eggsApi } from '@/lib/api'
-import { openExternalUrl } from '@/lib/utils'
 import { useAuth } from '@/lib/auth'
+import { openExternalUrl } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Copy, Download, ExternalLink, Pencil, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+
+function Field({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm">{value}</p>
+    </div>
+  )
+}
 
 export function EggDetailPage() {
-  const { toast } = useToast();
+  const { toast } = useToast()
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { canManage } = useAuth()
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -29,17 +36,10 @@ export function EggDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['egg', id] })
       queryClient.invalidateQueries({ queryKey: ['eggs'] })
-      toast({
-        title: 'Egg regenerated',
-        description: 'The egg configuration has been updated.',
-      })
+      toast({ title: 'Egg regenerated', description: 'The egg JSON was rebuilt from the source.' })
     },
     onError: (error: Error) => {
-      toast({
-        variant: 'destructive',
-        title: 'Failed to regenerate',
-        description: error.message,
-      })
+      toast({ variant: 'destructive', title: 'Could not regenerate egg', description: error.message })
     },
   })
 
@@ -55,180 +55,129 @@ export function EggDetailPage() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      toast({
-        title: 'Egg exported',
-        description: 'The egg JSON file has been downloaded.',
-      })
+      toast({ title: 'Egg exported', description: 'Import the JSON file into your panel.' })
     } catch {
-      toast({
-        variant: 'destructive',
-        title: 'Export failed',
-        description: 'Could not export the egg configuration.',
-      })
+      toast({ variant: 'destructive', title: 'Could not export egg' })
     }
   }
 
   const handleCopyJson = () => {
-    if (egg?.json_data) {
-      navigator.clipboard.writeText(JSON.stringify(egg.json_data, null, 2))
-      toast({
-        title: 'Copied to clipboard',
-        description: 'The egg JSON has been copied.',
-      })
-    }
+    if (!egg?.json_data) return
+    navigator.clipboard.writeText(JSON.stringify(egg.json_data, null, 2))
+    toast({ title: 'Egg JSON copied' })
   }
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        Loading egg details...
-      </div>
+      <p role="status" className="py-16 text-center text-sm text-muted-foreground">
+        Loading egg…
+      </p>
     )
   }
 
   if (error || !egg) {
     return (
       <div className="space-y-4">
-        <Button variant="ghost" onClick={() => navigate('/eggs')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Eggs
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link to="/eggs">
+            <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            Eggs
+          </Link>
         </Button>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <p className="text-muted-foreground">Egg not found</p>
-          </CardContent>
-        </Card>
+        <p className="py-16 text-center text-sm text-muted-foreground">
+          That egg does not exist, or you cannot access it.
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <EditEggDialog
-        key={`${egg.id}-${isEditOpen ? "open" : "closed"}`}
+        key={`${egg.id}-${isEditOpen ? 'open' : 'closed'}`}
         egg={egg}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
       />
-      
-      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-success/10 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild className="text-white hover:bg-white/20">
-            <Link to="/eggs">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-1">{egg.name}</h1>
-            <p className="text-white/80 capitalize">
-              {egg.source} • Java {egg.java_version} • {egg.visibility}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => openExternalUrl(egg.source_url)}
-            className="bg-black/20 border-white/10 text-white hover:bg-black/40 hover:text-white border-none"
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Source
-          </Button>
-          {canManage(egg.owner_id) && (
-            <Button 
-                variant="outline" 
-                onClick={() => setIsEditOpen(true)}
-                className="bg-black/20 border-white/10 text-white hover:bg-black/40 hover:text-white border-none"
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
-            </Button>
-          )}
-          {canManage(egg.owner_id) && (
-            <Button
-              variant="outline"
-              onClick={() => regenerateMutation.mutate()}
-              disabled={regenerateMutation.isPending}
-              className="bg-black/20 border-white/10 text-white hover:bg-black/40 hover:text-white border-none"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Regenerate
-            </Button>
-          )}
-          <Button 
-            onClick={handleExport}
-            className="bg-primary hover:bg-primary/90 text-white border-none shadow-lg"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
-      </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Minecraft Version</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{egg.minecraft_version || 'Unknown'}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Modloader</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold capitalize">
-              {egg.modloader || 'Unknown'}
-            </p>
-            {egg.modloader_version && (
-              <p className="text-sm text-muted-foreground">{egg.modloader_version}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Java Version</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">Java {egg.java_version}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <div>
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link to="/eggs">
+            <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            Eggs
+          </Link>
+        </Button>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Egg JSON</CardTitle>
-              <CardDescription>
-                The generated Pterodactyl egg configuration
-              </CardDescription>
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate text-xl font-semibold">{egg.name}</h1>
+              {egg.visibility === 'public' && (
+                <span className="rounded border border-border px-1.5 py-px text-xs text-muted-foreground">
+                  Public
+                </span>
+              )}
             </div>
-            <Button variant="outline" size="sm" onClick={handleCopyJson}>
-              <Copy className="mr-2 h-4 w-4" />
-              Copy
+            {egg.description && (
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{egg.description}</p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => openExternalUrl(egg.source_url)}>
+              <ExternalLink className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              Source
+            </Button>
+            {canManage(egg.owner_id) && (
+              <>
+                <Button variant="outline" onClick={() => setIsEditOpen(true)}>
+                  <Pencil className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => regenerateMutation.mutate()}
+                  disabled={regenerateMutation.isPending}
+                >
+                  <RefreshCw className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                  {regenerateMutation.isPending ? 'Regenerating…' : 'Regenerate'}
+                </Button>
+              </>
+            )}
+            <Button onClick={handleExport}>
+              <Download className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              Export JSON
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <pre className="bg-black/30 border border-success/10 p-4 rounded-lg overflow-auto max-h-96 text-sm">
-            {JSON.stringify(egg.json_data, null, 2)}
-          </pre>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {egg.description && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">{egg.description}</p>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-card px-4 py-3 sm:grid-cols-4">
+        <Field label="Source" value={egg.source} />
+        <Field label="Minecraft" value={egg.minecraft_version || '—'} />
+        <Field
+          label="Modloader"
+          value={
+            egg.modloader
+              ? `${egg.modloader}${egg.modloader_version ? ` ${egg.modloader_version}` : ''}`
+              : '—'
+          }
+        />
+        <Field label="Java" value={String(egg.java_version)} />
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-medium">Egg JSON</h2>
+          <Button variant="ghost" size="sm" onClick={handleCopyJson}>
+            <Copy className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+            Copy
+          </Button>
+        </div>
+        <pre className="max-h-[32rem] overflow-auto rounded-lg border border-border bg-card p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+          {JSON.stringify(egg.json_data, null, 2)}
+        </pre>
+      </div>
     </div>
   )
 }

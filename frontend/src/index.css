@@ -1,54 +1,42 @@
 @import "tailwindcss";
 
-/* Tailwind v4 CSS-first theme. Utility names (bg-background, text-success, ...)
-   are generated from these tokens, so there is no tailwind.config.js. */
+/* Linear/Notion-style product UI: neutral near-black surfaces, hairline borders,
+   one restrained indigo accent, Inter. Utilities are generated from these tokens. */
 @theme {
-  --color-background: hsl(240 10% 4%);
-  --color-foreground: hsl(0 0% 98%);
+  --color-background: #08090a;
+  --color-foreground: #f7f8f8;
+  --color-sidebar: #0c0d0e;
 
-  --color-card: hsl(240 6% 10%);
-  --color-card-foreground: hsl(0 0% 98%);
+  --color-card: #0f1011;
+  --color-card-foreground: #f7f8f8;
+  --color-popover: #191a1c;
+  --color-popover-foreground: #f7f8f8;
 
-  --color-popover: hsl(240 6% 10%);
-  --color-popover-foreground: hsl(0 0% 98%);
+  /* Used sparingly: the single primary action on a screen. */
+  --color-primary: #5e6ad2;
+  --color-primary-foreground: #ffffff;
 
-  --color-primary: hsl(262 83% 58%);
-  --color-primary-foreground: hsl(0 0% 100%);
+  --color-secondary: #1a1b1e;
+  --color-secondary-foreground: #f7f8f8;
+  --color-muted: #1a1b1e;
+  --color-muted-foreground: #8a8f98;
+  --color-accent: #1a1b1e;
+  --color-accent-foreground: #f7f8f8;
 
-  --color-secondary: hsl(240 4% 16%);
-  --color-secondary-foreground: hsl(0 0% 98%);
+  --color-success: #4cb782;
+  --color-destructive: #eb5757;
+  --color-destructive-foreground: #ffffff;
 
-  --color-muted: hsl(240 4% 16%);
-  --color-muted-foreground: hsl(240 5% 65%);
+  --color-border: #23252a;
+  --color-input: #23252a;
+  --color-ring: #5e6ad2;
 
-  --color-accent: hsl(262 83% 58%);
-  --color-accent-foreground: hsl(0 0% 100%);
-
-  --color-success: hsl(167 68% 45%);
-  --color-success-foreground: hsl(0 0% 100%);
-
-  --color-destructive: hsl(0 62.8% 30.6%);
-  --color-destructive-foreground: hsl(0 0% 100%);
-
-  --color-border: hsl(240 4% 16%);
-  --color-input: hsl(240 4% 16%);
-  --color-ring: hsl(262 83% 58%);
-
-  --color-sidebar: hsl(0 0% 0%);
-  --color-sidebar-foreground: hsl(240 5% 65%);
-
-  --radius-lg: 0.5rem;
-  --radius-md: 0.375rem;
   --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
 
-  --animate-fade-in-up: fade-in-up 0.4s ease-out;
-}
-
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(1rem);
-  }
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
@@ -59,11 +47,30 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    /* Compact product density, like Linear. */
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Visible keyboard focus everywhere, since the app never sets outline-none. */
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.011em;
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-ring);
-    outline-offset: 2px;
+    outline-offset: 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
