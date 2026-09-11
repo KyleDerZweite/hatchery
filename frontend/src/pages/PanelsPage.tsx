@@ -1,40 +1,36 @@
 import { Button } from "@/components/ui/button";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  PanelConnectionResult,
-  PanelCreateData,
-  PanelInstance,
-  panelsApi,
-} from "@/lib/api";
-import { openExternalUrl } from "@/lib/utils";
+import { PanelConnectionResult, PanelCreateData, PanelInstance, panelsApi } from "@/lib/api";
+import { cn, openExternalUrl } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-    CheckCircle,
-    ExternalLink,
-    Plus,
-    Server,
-    Trash2,
-    XCircle,
-} from "lucide-react";
+import { ExternalLink, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+
+/** Verified, refused, or never tested. */
+function StatusDot({ status }: { status: string }) {
+  return (
+    <span
+      className={cn(
+        "h-1.5 w-1.5 shrink-0 rounded-full",
+        status === "ok" && "bg-success",
+        status === "failed" && "bg-destructive",
+        status !== "ok" && status !== "failed" && "bg-muted-foreground/40",
+      )}
+      aria-hidden="true"
+    />
+  );
+}
 
 export function PanelsPage() {
   const { toast } = useToast();
@@ -55,18 +51,14 @@ export function PanelsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["panels"] });
       setIsDialogOpen(false);
-      resetForm();
-      toast({
-        title: "Panel added!",
-        description: "The panel instance has been added.",
-      });
+      setName("");
+      setUrl("");
+      setApiKey("");
+      setDescription("");
+      toast({ title: "Panel added", description: "Test the connection to verify the API key." });
     },
     onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Failed to add panel",
-        description: error.message,
-      });
+      toast({ variant: "destructive", title: "Could not add panel", description: error.message });
     },
   });
 
@@ -74,147 +66,115 @@ export function PanelsPage() {
     mutationFn: (id: number) => panelsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["panels"] });
-      toast({
-        title: "Panel deleted",
-        description: "The panel instance has been removed.",
-      });
+      toast({ title: "Panel deleted" });
     },
     onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Failed to delete panel",
-        description: error.message,
-      });
+      toast({ variant: "destructive", title: "Could not delete panel", description: error.message });
     },
   });
 
-  const testMutation = useMutation<
-    PanelConnectionResult,
-    Error,
-    number
-  >({
+  const testMutation = useMutation<PanelConnectionResult, Error, number>({
     mutationFn: (id: number) => panelsApi.test(id),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["panels"] });
       toast({
-        title: data.success ? "Connection successful" : "Connection failed",
+        variant: data.success ? "default" : "destructive",
+        title: data.success ? "Panel verified" : "Panel refused the connection",
         description: data.panel_type ? `${data.message} (${data.panel_type})` : data.message,
       });
     },
     onError: (error: Error) => {
-      toast({
-        variant: "destructive",
-        title: "Connection test failed",
-        description: error.message,
-      });
+      toast({ variant: "destructive", title: "Connection test failed", description: error.message });
     },
   });
-
-  const resetForm = () => {
-    setName("");
-    setUrl("");
-    setApiKey("");
-    setDescription("");
-  };
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate({
       name,
-      url: url.replace(/\/$/, ""), // Remove trailing slash
+      url: url.replace(/\/$/, ""),
       api_key: apiKey,
       description: description || undefined,
     });
   };
 
   return (
-    <div className="space-y-8">
-      <div className="bg-card/50 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-success/10 flex items-center justify-between">
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Panels</h1>
-          <p className="text-white/80">
-            Manage your Pterodactyl/Pelican panel instances
+          <h1 className="text-xl font-semibold">Panels</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pterodactyl and Pelican panels you can verify an application API key against.
           </p>
         </div>
+
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 text-white border-none shadow-lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Panel
+            <Button>
+              <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              Add panel
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleCreate}>
               <DialogHeader>
-                <DialogTitle>Add Panel Instance</DialogTitle>
+                <DialogTitle>Add panel</DialogTitle>
                 <DialogDescription>
-                  Save a Pterodactyl or Pelican panel and verify its application API.
+                  The API key is encrypted before it is stored.
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
+              <div className="space-y-4 py-5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="panel-name">Name</Label>
                   <Input
-                    id="name"
-                    placeholder="My Game Panel"
+                    id="panel-name"
+                    placeholder="Home panel"
                     value={name}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setName(e.target.value)
-                    }
+                    onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="url">Panel URL</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="panel-url">Panel URL</Label>
                   <Input
-                    id="url"
+                    id="panel-url"
                     type="url"
                     placeholder="https://panel.example.com"
                     value={url}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setUrl(e.target.value)
-                    }
+                    onChange={(e) => setUrl(e.target.value)}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">API Key</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="panel-key">Application API key</Label>
                   <Input
-                    id="apiKey"
+                    id="panel-key"
                     type="password"
-                    placeholder="Enter your panel API key"
+                    placeholder="ptla_…"
                     value={apiKey}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setApiKey(e.target.value)
-                    }
+                    onChange={(e) => setApiKey(e.target.value)}
+                    aria-describedby="panel-key-hint"
                     required
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Get this from your panel's admin settings
+                  <p id="panel-key-hint" className="text-xs text-muted-foreground">
+                    Create one in your panel under Admin → Application API.
                   </p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description (optional)</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="panel-desc">Description (optional)</Label>
                   <Input
-                    id="description"
-                    placeholder="Production server panel"
+                    id="panel-desc"
                     value={description}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setDescription(e.target.value)
-                    }
+                    onChange={(e) => setDescription(e.target.value)}
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                >
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Adding..." : "Add Panel"}
+                  {createMutation.isPending ? "Adding…" : "Add panel"}
                 </Button>
               </DialogFooter>
             </form>
@@ -222,90 +182,67 @@ export function PanelsPage() {
         </Dialog>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">Loading panels...</div>
-      ) : panels.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Server className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No panels connected</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Add a Pterodactyl or Pelican panel to verify API compatibility.
-            </p>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Your First Panel
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {panels.map((panel: PanelInstance) => (
-            <Card key={panel.id} className="transition-all hover:border-primary/30">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{panel.name}</CardTitle>
-                    <CardDescription className="truncate max-w-[200px] text-muted-foreground/70">
-                      {panel.url}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center">
-                    {panel.is_active ? (
-                      <CheckCircle className="h-5 w-5 text-success" />
-                    ) : (
-                      <XCircle className="h-5 w-5 text-red-500" />
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {panel.description && (
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                    {panel.description}
-                  </p>
-                )}
-                <div className="mb-4 rounded-md border border-border bg-background/40 p-3 text-xs">
-                  <p className="font-medium text-foreground">
-                    Status: {panel.last_test_status}
-                  </p>
-                  <p className="mt-1 text-muted-foreground">
-                    {panel.last_test_message || "Not tested yet."}
+      <div className="rounded-lg border border-border">
+        {isLoading ? (
+          <p role="status" className="px-4 py-10 text-center text-sm text-muted-foreground">
+            Loading panels…
+          </p>
+        ) : panels.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-muted-foreground">
+            No panels yet. Add one to verify its application API key.
+          </p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {panels.map((panel) => (
+              <li
+                key={panel.id}
+                className="group flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-secondary/50"
+              >
+                <StatusDot status={panel.last_test_status} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{panel.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {panel.url} · {panel.last_test_message || "Not tested yet."}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 mt-2">
+
+                <div className="flex items-center gap-0.5">
                   <Button
-                    size="sm"
                     variant="ghost"
-                    className="flex-1 border border-primary/20 hover:bg-primary/10 hover:text-primary"
-                    onClick={() => testMutation.mutate(panel.id)}
-                    disabled={testMutation.isPending}
-                  >
-                    Test Connection
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="hover:bg-primary/10 hover:text-primary"
+                    size="icon"
+                    className="opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100"
                     onClick={() => openExternalUrl(panel.url)}
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Open {panel.name}</span>
                   </Button>
                   <Button
-                    size="sm"
                     variant="ghost"
-                    className="hover:bg-destructive/10 hover:text-destructive"
+                    size="icon"
+                    className="opacity-0 transition-opacity hover:text-destructive focus:opacity-100 group-hover:opacity-100"
                     onClick={() => deleteMutation.mutate(panel.id)}
                     disabled={deleteMutation.isPending}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    <span className="sr-only">Delete {panel.name}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-1.5"
+                    onClick={() => testMutation.mutate(panel.id)}
+                    disabled={testMutation.isPending}
+                  >
+                    {testMutation.isPending && testMutation.variables === panel.id
+                      ? "Testing…"
+                      : "Test"}
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
