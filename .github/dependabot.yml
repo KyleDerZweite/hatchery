@@ -12,6 +12,7 @@ updates:
       - area:backend
     groups:
       backend-dependencies:
+        update-types: [minor, patch]
         patterns:
           - "*"
 
@@ -27,6 +28,7 @@ updates:
       - area:frontend
     groups:
       frontend-dependencies:
+        update-types: [minor, patch]
         patterns:
           - "*"
     # TypeScript 7 broke CI because typescript-eslint does not support it yet
